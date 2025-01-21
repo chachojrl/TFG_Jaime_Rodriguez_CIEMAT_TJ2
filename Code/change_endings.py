@@ -38,6 +38,6 @@ if 'ComentarioExp' in df.columns:
     df['ComentarioExp'] = df['ComentarioExp'].fillna('').apply(limpiar_final)
 
 # Guardar el archivo actualizado
-df.to_csv(output_path, index=False, encoding='utf-8')
+df.to_csv(output_path, index=False, encoding='latin-1')
 
 print("Las columnas 'comentarioDesc' y 'ComentarioExp' fueron limpiadas y el archivo se guardó correctamente.")
