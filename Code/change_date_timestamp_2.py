@@ -64,7 +64,9 @@ df['timestamp'] = pd.to_datetime(df['fecha'].astype(str) + ' ' + df['hora'].asty
 output_path = 'C:/Users/Administrador.HP_Jaime/Desktop/TFG-main/Data/PARAMETROS_TJ2_Converted.csv'
 df.to_csv(output_path, index=False, sep=';', encoding='utf-8')
 
-print(f"Archivo procesado y guardado correctamente con la codificación detectada: {encoding}")
+print(f"El archivo ha sido   procesado y guardado correctamente con la codificación detectada: {encoding}")
+
+
 
 
 
