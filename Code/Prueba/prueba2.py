@@ -1,5 +1,5 @@
 import pandas as pd
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 # Paso 1: Cargar y procesar el CSV
 def load_csv(file_path):
@@ -40,14 +40,20 @@ def generate_response(llm_pipeline, query, results):
     return llm_pipeline(prompt)[0]["generated_text"]
 
 # Main: Integrar todo
-if _name_ == "_main_":
+if __name__ == "_main_":
     # Configuración inicial
-    csv_file = "C:/Users/jaimerodriguezlara/OneDrive - IBM/Escritorio/TFG/Data/PARAMETROS_TJ2.csv"  # Cambia esto por el camino a tu CSV
+    ##csv_file = "C:/Users/jaimerodriguezlara/OneDrive - IBM/Escritorio/TFG/Data/PARAMETROS_TJ2.csv"  # Cambia esto por el camino a tu CSV
+    csv_file = "./PARAMETROS_TJ2.csv"
     data = load_csv(csv_file)
+    
+    print(data)
     
     if data is not None:
         # Configura un modelo generativo (aquí un ejemplo con Hugging Face Transformers)
-        llm_pipeline = pipeline("text-generation", model="meta-llama/Llama-2-7b-hf")  # Cambia según el modelo configurado
+        pipe = pipeline("text-generation", model="meta-llama/Llama-3.1-8B")
+        
+        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.1-8B")
+        model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-3.1-8B")
 
         print("¡Listo para recibir consultas!")
         while True:
