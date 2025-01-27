@@ -18,7 +18,7 @@ def chat_with_ollama():
             print("Ejecutando el script 'diagramasWeb.py'...")
             
             try:
-                # Ejecutar el fichero diagramasWeb.py
+                # Ejecutar el fichero diagramasWeb.py (Cambiar python runable)
                 subprocess.run(["C:/Users/rodla/miniconda3/envs/tfg/python.exe", "./Code/diagramasWeb.py"], check=True)
 
             except subprocess.CalledProcessError as e:
