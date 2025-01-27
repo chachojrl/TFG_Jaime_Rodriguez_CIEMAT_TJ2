@@ -1,16 +1,14 @@
 import requests
 import matplotlib.pyplot as plt
 import urllib3
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 import re
 
-# Deshabilitar advertencias por SSL
+# Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def generate_url(base_url, shot, nsignal, signals, factors, tstart, tstop):
     """
-    Genera una URL para realizar una solicitud basada en los parámetros proporcionados.
+    Generates a URL to make a request based on the provided parameters.
     """
     url = f"{base_url}?shot={shot}&nsignal={nsignal}"
     
@@ -24,25 +22,32 @@ def generate_url(base_url, shot, nsignal, signals, factors, tstart, tstop):
 
 def fetch_data(url):
     """
-    Realiza una solicitud HTTP GET al enlace generado y devuelve la respuesta.
+    Makes an HTTP GET request to the generated URL and returns the response.
     """
     response = requests.get(url, verify=False)
     if response.status_code == 200:
-        print("Respuesta completa del servidor:")
-        print(response.text[:1000])  # Muestra los primeros 1000 caracteres
+        print("Full server response:")
+        print(response.text[:1000])  # Displays the first 1000 characters
         return response.text
     else:
-        raise ValueError(f"Error al conectar con el servidor: {response.status_code}")
+        raise ValueError(f"Error connecting to the server: {response.status_code}")
 
 def extract_data_points(html_content, signals):
     """
-    Extrae los datos contenidos en `dataXX` desde el HTML recibido para múltiples señales.
+    Extracts the data contained in `dataXX` from the received HTML for multiple signals.
+    If a signal has no data, it displays a message indicating that it was not found.
     """
     data_points_dict = {}
     matches = re.finditer(r"var data(\d{2}) = \[(.*?)\];", html_content, re.DOTALL)
-    for match, signal_name in zip(matches, signals):
+    for signal_name in signals:
+        if not signal_name.strip():
+            continue
+        match = next((m for m in matches if f"var data{signals.index(signal_name)+1:02}" in m.group(0)), None)
+        if not match:
+            print(f"Warning: No data found for the signal '{signal_name}'.")
+            continue
         data_block = match.group(2)
-        # Parsear los datos en una lista de tuplas
+        # Parse the data into a list of tuples
         data_points = []
         for line in data_block.split('],['):
             values = line.strip('[]').split(',')
@@ -51,59 +56,58 @@ def extract_data_points(html_content, signals):
         data_points_dict[signal_name] = data_points
     
     if not data_points_dict:
-        raise ValueError("No se encontraron datos en las señales `dataXX`.")
+        raise ValueError("No valid data found for the provided signals.")
 
     return data_points_dict
 
-def plot_data(data_points_dict):
+def plot_data_per_signal(data_points_dict):
     """
-    Genera una gráfica combinada a partir de los puntos de datos extraídos.
+    Generates individual graphs for each signal.
     """
-    plt.figure(figsize=(10, 6))
-
     for signal_name, data_points in data_points_dict.items():
         x_values = [point[0] for point in data_points]
         y_values = [point[1] for point in data_points]
+
+        plt.figure(figsize=(10, 6))
         plt.plot(x_values, y_values, label=signal_name, linewidth=1.5)
+        plt.title(f"Graph for Signal: {signal_name}")
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.legend()
+        plt.grid()
+        plt.show()
 
-    plt.title("Gráfica de los datos extraídos de múltiples señales")
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.legend()
-    plt.grid()
-    plt.show()
-
-# Configuración inicial
+# Initial configuration
 base_url = "https://info.fusion.ciemat.es/cgi-bin/TJII_data.cgi"
 
-shot = int(input("Ingrese el valor de 'shot': "))
-nsignal = int(input("Ingrese el número de señales (entre 5 y 30): "))
+shot = int(input("Enter the value of 'shot': "))
+nsignal = int(input("Enter the number of signals (between 5 and 30) [default 5]: ") or 5)
 
 if nsignal < 5 or nsignal > 30:
-    raise ValueError("El número de señales debe estar entre 5 y 30.")
+    raise ValueError("The number of signals must be between 5 and 30.")
 
 signals = []
 factors = []
 
 for i in range(1, nsignal + 1):
-    signal = input(f"Ingrese el nombre de la señal {i} (deje vacío si no aplica): ")
-    factor = input(f"Ingrese el factor para la señal {i} (por defecto 1.00): ") or "1.00"
+    signal = input(f"Enter the name of signal {i} (leave blank if not applicable): ")
+    factor = input(f"Enter the factor for signal {i} (default 1.00): ") or "1.00"
     signals.append(signal)
     factors.append(factor)
 
-tstart = float(input("Ingrese el tiempo inicial (tstart) [por defecto 0.00]: ") or 0.00)
-tstop = float(input("Ingrese el tiempo final (tstop) [por defecto 2000.00]: ") or 2000.00)
+tstart = float(input("Enter the start time (tstart) [default 0.00]: ") or 0.00)
+tstop = float(input("Enter the stop time (tstop) [default 2000.00]: ") or 2000.00)
 
-# Generar URL
+# Generate URL
 generated_url = generate_url(base_url, shot, nsignal, signals, factors, tstart, tstop)
-print("URL generada:", generated_url)
+print("Generated URL:", generated_url)
 
-# Obtener datos y procesar
+# Fetch and process data
 try:
     raw_html = fetch_data(generated_url)
     data_points_dict = extract_data_points(raw_html, signals)
-    print("Datos extraídos:", {k: v[:5] for k, v in data_points_dict.items()})  # Muestra los primeros 5 puntos de cada señal
-    plot_data(data_points_dict)
+    print("Extracted data:", {k: v[:5] for k, v in data_points_dict.items()})  # Shows the first 5 points of each signal
+    plot_data_per_signal(data_points_dict)
 
 except Exception as e:
-    print("Error al procesar el diagrama:", e)
+    print("Error processing the diagram:", e)
