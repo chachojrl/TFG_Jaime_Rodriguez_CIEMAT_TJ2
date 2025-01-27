@@ -43,8 +43,13 @@ def chat_with_ollama():
                 
                 try:
                     # Pass the matching signals and shot number to the program as arguments
-                    subprocess.run([
+                    '''subprocess.run([
                         "C:/Users/rodla/miniconda3/envs/tfg/python.exe", 
+                        "./Code/diagramasWeb.py", 
+                        "--shot", shot, 
+                        "--signals"] + matching_signals, check=True)'''
+                    subprocess.run([
+                        "C:/Users/jaimerodriguezlara/miniconda3/envs/tfg/python.exe", 
                         "./Code/diagramasWeb.py", 
                         "--shot", shot, 
                         "--signals"] + matching_signals, check=True)
