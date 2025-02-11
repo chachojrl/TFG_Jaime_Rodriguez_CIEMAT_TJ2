@@ -30,7 +30,7 @@ llm = Replicate(
 )
 
 # 🔹 Cargar y preprocesar el dataset
-file_path = "Data\Datos_del_CSV.csv"  # Ruta del CSV
+file_path = "../../Data/Datos_del_CSV.csv"  # Ruta del CSV
 data = pd.read_csv(file_path, delimiter=";", encoding="ISO-8859-1", low_memory=False)
 
 # Reemplazar valores nulos

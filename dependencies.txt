@@ -1,3 +1,6 @@
 transformers
 torch
 ipykernel
+
+
+pip install scikit-learn
