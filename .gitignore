@@ -1,3 +1,5 @@
+__pycache__/
+.env
 
 /Utilities/similPatternTool/
-/Espectogramas_CIEMAT/
+/data/raw/preprocessed_spectograms/

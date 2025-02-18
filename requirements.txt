@@ -1,0 +1,23 @@
+requests
+matplotlib
+urllib3
+pandas
+langchain_community
+python-dotenv
+googletrans
+nest_asyncio
+ollama
+pandasql
+replicate
+streamlit
+fastapi
+uvicorn
+watchdog
+google-cloud-translate
+
+# Generate Spectograms to Excell
+openpyxl
+
+
+# Predictions
+scikit-learn
