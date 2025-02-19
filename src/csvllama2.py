@@ -6,98 +6,69 @@ import nest_asyncio
 import pandasql as ps
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from fastapi.logger import logger
-import traceback
 
+# Apply async compatibility
 nest_asyncio.apply()
-
-# Initialize FastAPI
-app = FastAPI()
 
 # Load environment variables
 load_dotenv()
-
-# Set up Replicate for LLaMA-2
 os.environ["REPLICATE_API_TOKEN"] = os.getenv("REPLICATE_API_TOKEN")
-llama2_13b_chat = "meta/meta-llama-3-8b-instruct"
 
+# Initialize LLaMA 3 Model
 llm = Replicate(
-    model=llama2_13b_chat,
+    model="meta/meta-llama-3-8b-instruct",
     model_kwargs={"temperature": 0.7, "max_new_tokens": 100}
 )
 
-# Load the CSV file
-file_path = "../data/processed/Datos_del_CSV.csv"  # Replace with your file path
-data = pd.read_csv(file_path, delimiter=";", encoding="ISO-8859-1")
+# Load the CSV file in memory
+CSV_FILE = "../data/processed/cleaned_csv_data.csv"
+def load_csv():
+    try:
+        df = pd.read_csv(CSV_FILE)
+        return df.astype(str)  # Ensure all data is treated as string for querying
+    except Exception as e:
+        print(f"Error loading CSV: {e}")
+        return None
 
-# Ensure missing values are replaced properly
-for column in data.columns:
-    if data[column].dtype == "float64":
-        data[column] = data[column].fillna(-1)
-        if column == "N_DESCARGA":
-            data[column] = data[column].astype(int)
-    else:
-        data[column] = data[column].fillna("N/A")
+data = load_csv()
 
-# Convert the entire DataFrame to strings
-data = data.astype(str)
-
-# Define the column names and script as context
+# Define context for SQL generation
 script_context = (
-    "The table is named 'data' and contains the following important columns:\n"
-    "N_DESCARGA, fecha, hora, comentarioDesc, comentarioExp, configuracion, "
-    "potencia_radiada, energia_diamagnetica.\n"
-    "You must use these column names exactly as they are when writing SQL queries.\n"
-    "JUST OUTPUT THE SQL QUERY, NOTHING ELSE, no sure i´d be happy to help, JUST THE SQL QUERY\n"
-    "E.g.,: SELECT hora FROM data WHERE N_DESCARGA = ´26458`;"
-    "Questions must be in English, and the output must always be a valid SQL query.\n"
-    "Strictly output only the SQL query with no additional text, explanation, or formatting."
+    "The table is named 'data' and contains the following columns:\n"
+    "N_DESCARGA, fecha, hora, comentarioDesc, comentarioExp, configuracion, puffing_final, limitador_z1, limitador_z2, presion_base, tipo_impurezas, tiempo_sonda, tiempo_impurezas, ne_corte, pared, validada, itf, icc, hx, vf, valvula_li1, valvula_li2, valvula_he, valvula_cx1, valvula_cx2, valvula_nb, valvula_cnb1, valvula_cnb2, presion_cx1, presion_cx2, posicion_sonda_d4top, posicion_electrodo_a7top, posicion_sonda_b2bot, polaridad_limitador_a3bot, polaridad_limitador_c3bot, polaridad_electrodo_a7top, presion_nb, presion_cnb1, presion_cnb2, angulo_DR, potencia_nominal_ECRH1, potencia_depositada_ECRH1, inyeccion_OnOff_axis_ECRH1, modulacion_ECRH1, angulo_polarizacion_lineal_ECRH1, angulo_polarizacion_eliptica_ECRH1, angulo_toroidal_deposicion_ECRH1, angulo_1_ECRH1, angulo_2_ECRH1, n_paralelo_ECRH1, fmod_ECRH1, rho_ECRH1, tini_ECRH1, longitud_pulso_nominal_ECRH1, longitud_pulso_real_ECRH1, potencia_nominal_ECRH2, inyeccion_OnOff_axis_ECRH2, modulacion_ECRH2, angulo_polarizacion_lineal_ECRH2, angulo_toroidal_deposicion_ECRH2, angulo_1_ECRH2, angulo_2_ECRH2, n_paralelo_ECRH2, tini_ECRH2, longitud_pulso_nominal_ECRH2, fmod_ECRH2, rho_ECRH2, longitud_pulso_real_ECRH2, VAccel_nominal_NBI1, IAccel_nominal_NBI1, tini_NBI1, longitud_pulso_nominal_NBI1, potencia_nominal_NBI1, VAccel_real_NBI1, IAccel_real_NBI1, longitud_pulso_real_NBI1, updated_NBI1, potencia_through_port_NBI1, factor_transm_NBI1, VAccel_nominal_NBI2, IAccel_nominal_NBI2, tini_NBI2, longitud_pulso_nominal_NBI2, potencia_nominal_NBI2, potencia_through_port_NBI2, VAccel_real_NBI2, IAccel_real_NBI2, longitud_pulso_real_NBI2, factor_transm_NBI2.\n"
+    "Use these exact column names when writing SQL queries.\n"
+    "Output ONLY the SQL query, no explanations."
 )
 
-# Helper function to execute SQL queries on the DataFrame
-def execute_sql_query(data, sql_query):
+def execute_sql_query(sql_query):
+    """Executes an SQL query on the loaded DataFrame."""
     try:
-        # Use pandasql to execute SQL queries
         result = ps.sqldf(sql_query, locals())
-        return result
+        return result.to_dict(orient="records")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"SQL Execution Error: {e}")
+        return {"error": f"SQL Execution Error: {e}"}
 
-# Define request model for the API
+def query_csv(question: str):
+    """Processes a natural language question into an SQL query and executes it."""
+    if data is None:
+        return {"error": "CSV data not loaded."}
+    
+    prompt = f"{script_context}\nConvert the following question into an SQL query: {question}"
+    response = llm.invoke(input=prompt).strip()
+    
+    sql_query = next((line.strip() for line in response.splitlines() if line.strip().upper().startswith("SELECT")), None)
+    if not sql_query:
+        return {"error": "Invalid SQL query generated."}
+    
+    return execute_sql_query(sql_query)
+
+# FastAPI Endpoint
+description = "API to process queries related to TJ-II experiment data."
+app = FastAPI(title="TJ-II CSV Query API", description=description)
+
 class Question(BaseModel):
     question: str
 
 @app.post("/ask")
 def ask_question(question: Question):
-    try:
-        # Log the received question
-        print(f"Received question: {question.question}")
-
-        # Provide the script and the question directly to the LLM
-        llm_input = f"{script_context}\nConvert the following question into an SQL query: {question.question}"
-        print(f"LLM Input: {llm_input}")
-
-        # Get the generated SQL query from LLaMA-2
-        response = llm.invoke(input=llm_input).strip()
-        print(f"Raw LLM Response: {response}")
-
-        # Extract only the SQL query
-        # Find the first line that starts with "SELECT" and remove any leading/trailing text
-        sql_query = next((line.strip() for line in response.splitlines() if line.strip().upper().startswith("SELECT")), None)
-
-        if not sql_query:
-            raise HTTPException(status_code=400, detail="Invalid SQL query generated.")
-
-        print(f"Cleaned SQL Query: {sql_query}")
-
-        # Execute the SQL query on the DataFrame
-        result = execute_sql_query(data, sql_query)
-        print(f"Query execution result: {result}")
-
-        # Return the query result
-        return result.to_dict(orient="records")
-
-    except Exception as e:
-        # Log the detailed error
-        print(f"Error during processing: {e}")
-        raise HTTPException(status_code=500, detail=f"Error during processing: {e}")
+    return query_csv(question.question)
