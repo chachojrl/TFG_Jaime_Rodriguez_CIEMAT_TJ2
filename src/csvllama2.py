@@ -25,26 +25,31 @@ CSV_FILE = "../data/processed/cleaned_csv_data.csv"
 def load_csv():
     try:
         df = pd.read_csv(CSV_FILE)
-        return df.astype(str)  # Ensure all data is treated as string for querying
+        df.columns = df.columns.str.strip().str.lower()
+        return df.astype(str)
     except Exception as e:
         print(f"Error loading CSV: {e}")
         return None
 
 data = load_csv()
 
-# Define context for SQL generation
-script_context = (
-    "The table is named 'data' and contains the following columns:\n"
-    "N_DESCARGA, fecha, hora, comentarioDesc, comentarioExp, configuracion, puffing_final, limitador_z1, limitador_z2, presion_base, tipo_impurezas, tiempo_sonda, tiempo_impurezas, ne_corte, pared, validada, itf, icc, hx, vf, valvula_li1, valvula_li2, valvula_he, valvula_cx1, valvula_cx2, valvula_nb, valvula_cnb1, valvula_cnb2, presion_cx1, presion_cx2, posicion_sonda_d4top, posicion_electrodo_a7top, posicion_sonda_b2bot, polaridad_limitador_a3bot, polaridad_limitador_c3bot, polaridad_electrodo_a7top, presion_nb, presion_cnb1, presion_cnb2, angulo_DR, potencia_nominal_ECRH1, potencia_depositada_ECRH1, inyeccion_OnOff_axis_ECRH1, modulacion_ECRH1, angulo_polarizacion_lineal_ECRH1, angulo_polarizacion_eliptica_ECRH1, angulo_toroidal_deposicion_ECRH1, angulo_1_ECRH1, angulo_2_ECRH1, n_paralelo_ECRH1, fmod_ECRH1, rho_ECRH1, tini_ECRH1, longitud_pulso_nominal_ECRH1, longitud_pulso_real_ECRH1, potencia_nominal_ECRH2, inyeccion_OnOff_axis_ECRH2, modulacion_ECRH2, angulo_polarizacion_lineal_ECRH2, angulo_toroidal_deposicion_ECRH2, angulo_1_ECRH2, angulo_2_ECRH2, n_paralelo_ECRH2, tini_ECRH2, longitud_pulso_nominal_ECRH2, fmod_ECRH2, rho_ECRH2, longitud_pulso_real_ECRH2, VAccel_nominal_NBI1, IAccel_nominal_NBI1, tini_NBI1, longitud_pulso_nominal_NBI1, potencia_nominal_NBI1, VAccel_real_NBI1, IAccel_real_NBI1, longitud_pulso_real_NBI1, updated_NBI1, potencia_through_port_NBI1, factor_transm_NBI1, VAccel_nominal_NBI2, IAccel_nominal_NBI2, tini_NBI2, longitud_pulso_nominal_NBI2, potencia_nominal_NBI2, potencia_through_port_NBI2, VAccel_real_NBI2, IAccel_real_NBI2, longitud_pulso_real_NBI2, factor_transm_NBI2.\n"
-    "Use these exact column names when writing SQL queries.\n"
-    "Output ONLY the SQL query, no explanations."
-)
-
 def execute_sql_query(sql_query):
     """Executes an SQL query on the loaded DataFrame."""
+
     try:
-        result = ps.sqldf(sql_query, locals())
-        return result.to_dict(orient="records")
+        result = ps.sqldf(sql_query, {"data": data})
+        result.to_dict(orient="records")
+
+        prompt = f"""
+        You are an AI that translates JSON to natural language 
+        
+        Convert the following JSON into a precise Natural language:
+        "{result}"
+
+        Return ONLY the Natural Language response """
+        
+        response = llm.invoke(input=prompt).strip()
+        return response
     except Exception as e:
         return {"error": f"SQL Execution Error: {e}"}
 
@@ -53,14 +58,42 @@ def query_csv(question: str):
     if data is None:
         return {"error": "CSV data not loaded."}
     
-    prompt = f"{script_context}\nConvert the following question into an SQL query: {question}"
+    #prompt = f"{script_context}\nConvert the following question into an SQL query: {question}"
+    prompt = f"""
+    You are an AI that translates user queries into precise SQL queries.
+    The table name is 'data' and contains the following columns:
+
+    {', '.join(data.columns)}
+
+    Follow these strict rules:
+    - Always generate a SQL SELECT query.
+    - Never add comments or explanations.
+    - Use exact column names from the table.
+    - The column fecha is like `YYYY/MM/DD`
+    - Always use lowercase column names.
+    - If the user asks for a number of discharge (N_DESCARGA), filter using `WHERE n_descarga = ...`
+    - If the user asks for how many of something, use `COUNT(*) AS total_count`
+    - If the user requests specific columns, include them explicitly in the SELECT statement.
+    - If the user asks for all available data, use `SELECT *`
+    - Ensure that all filters (WHERE conditions) use exact column names and values.
+    - If the user query references a configuration, use `WHERE configuracion = ...`
+    - The query must be a valid SQL statement, even if the user input is unstructured.
+
+    Convert the following user request into a precise SQL query:
+    "{question}"
+
+    Return ONLY the SQL query with no extra text.
+    """
+
+
+
     response = llm.invoke(input=prompt).strip()
+    print(response)
     
-    sql_query = next((line.strip() for line in response.splitlines() if line.strip().upper().startswith("SELECT")), None)
-    if not sql_query:
+    if not response:
         return {"error": "Invalid SQL query generated."}
     
-    return execute_sql_query(sql_query)
+    return execute_sql_query(response)
 
 # FastAPI Endpoint
 description = "API to process queries related to TJ-II experiment data."

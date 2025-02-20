@@ -71,3 +71,16 @@ def determine_intent(user_input):
     response = llm.invoke(input=prompt).strip()
     print(response)
     return response.upper()
+
+
+def ask_general_ai(user_input):
+    """Consulta al modelo de IA para responder preguntas generales."""
+    prompt = f"""
+    You are an advanced AI that provides helpful, clear, and concise answers.
+    Answer the following question accurately:
+
+    "{user_input}"
+    """
+
+    response = llm.invoke(input=prompt).strip()
+    return response

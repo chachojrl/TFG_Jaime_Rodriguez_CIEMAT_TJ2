@@ -1,3 +1,5 @@
 IBM Cloud Pak for Data: https://eu-gb.dataplatform.cloud.ibm.com/docs/content/wsj/getting-started/welcome-main.html?context=cpdaas&audience=wdp
 
 IBM WatsonX : https://eu-gb.dataplatform.cloud.ibm.com/docs/content/wsj/getting-started/welcome-main.html?context=wx&audience=wdp 
+
+latex par amemoria tfg (pedir plantilla a Alberto Diaz)

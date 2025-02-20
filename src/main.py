@@ -1,12 +1,12 @@
 import streamlit as st
 import urllib3
 import pandas as pd
-from ai_parser import parse_user_input_with_ai, determine_intent
+from ai_parser import parse_user_input_with_ai, determine_intent, ask_general_ai
 from data_fetcher import generate_url, fetch_data, extract_data_points
 from plotter import plot_data_per_signal
 from config_loader import load_keywords, load_signal_options
 import requests
-from csvllama2 import ask_question
+from csvllama2 import query_csv
 
 # Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -35,7 +35,6 @@ def main():
     
     keywords = load_keywords()
     valid_signals = load_signal_options()
-    print(valid_signals)
     df = load_csv()
     
     if st.button("Submit"):
@@ -63,12 +62,12 @@ def main():
                 st.error("Failed to interpret request.")
         elif intent == "CSV":
             if df is not None:
-                csv_response = ask_question({"question": user_input})
+                csv_response = query_csv(user_input)
                 st.write(csv_response if csv_response else "No relevant data found in CSV.")
             else:
                 st.error("CSV data is not available.")
         else:
-            response = ask_api(user_input)
+            response = ask_general_ai(user_input)
             st.write(response if response else "No response.")
 
 if __name__ == "__main__":

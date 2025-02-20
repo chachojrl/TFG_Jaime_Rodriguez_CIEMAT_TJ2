@@ -72,21 +72,21 @@ def procesar_pregunta_y_predecir(pregunta):
             f"- **vf:** {vf}\n"
             f"- **icc:** {icc}\n"
             f"- **hx:** {hx}\n\n"
-            f"🔮 Predicciones de potencia nominal:\n"
+            f" Predicciones de potencia nominal:\n"
             f"- **ECRH1:** {predicciones['potencia_nominal_ECRH1']:.2f} unidades\n"
             f"- **ECRH2:** {predicciones['potencia_nominal_ECRH2']:.2f} unidades\n"
         )
     else:
-        respuesta = "❌ No encontré suficientes valores en la pregunta. Proporciona **itf, vf, icc y hx**."
+        respuesta = "No encontré suficientes valores en la pregunta. Proporciona **itf, vf, icc y hx**."
 
     return respuesta
 
 # 🔹 Simulación de interacción con el chatbot
 while True:
-    pregunta = input("\n🗣️ Haz una pregunta sobre predicción de potencia (o escribe 'salir' para terminar):\n>> ")
+    pregunta = input("\nHaz una pregunta sobre predicción de potencia (o escribe 'salir' para terminar):\n>> ")
     
     if pregunta.lower() in ["salir", "exit", "quit"]:
-        print("👋 Saliendo del chatbot...")
+        print("Saliendo del chatbot...")
         break
 
     respuesta = procesar_pregunta_y_predecir(pregunta)
