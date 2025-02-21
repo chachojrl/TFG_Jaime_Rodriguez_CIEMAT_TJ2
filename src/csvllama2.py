@@ -73,32 +73,60 @@ def query_csv(question: str):
         return {"error": "CSV data not loaded."}
 
     prompt = f"""
-    You are an AI that translates user queries into precise SQL queries.
-    The table name is 'data' and contains the following columns:
+        You are an AI that translates user queries into precise SQL queries.
+        The table name is 'data' and contains the following columns:
 
-    {', '.join(data.columns)}
+        {', '.join(data.columns)}
 
-    Follow these strict rules:
-    - Always generate a SQL query.
-    - the SQL query always has to have `... FROM data ...`
-    - Never generate queries that contain  `... As ... ` statements
-    - Never add comments or explanations.
-    - Use exact column names from the table.
-    - The column 'fecha' is formatted as `YYYY/MM/DD`.
-    - Always use lowercase column names.
-    - If the user asks for a discharge number (N_DESCARGA), use `WHERE n_descarga = ...`
-    - If the user asks for how many of something, use `COUNT(*) AS total_count`
-    - If the user requests specific columns, include them explicitly in the SELECT statement.
-    - If the user asks for all available data, use `SELECT *`
-    - Ensure that all filters (WHERE conditions) use exact column names and values.
-    - If the user ask for the last shot, use the last number in the n_descarga column 
-    - If the user query references a configuration, use `WHERE configuracion = ...`
-    - The query must be a valid SQL statement, even if the user input is unstructured.
+        Follow these strict rules:
+        - Always generate a valid SQL query.
+        - Always include `FROM data` in the query.
+        - Never use `AS` to rename columns.
+        - Never add comments or explanations.
+        - Always use exact column names as they appear in the table.
+        - The column 'fecha' is formatted as `YYYY/MM/DD`, where YYYY = Year, MM = Month, and DD = Day.
+        - Always use lowercase column names.
+        - If the user asks for a specific discharge number (N_DESCARGA), use `WHERE n_descarga = ...`
+        - If the user asks about a year, extract the year from 'fecha' using `substr(fecha, 1, 4)`.
+        - If the user asks about a month, extract the year and month from 'fecha' using `substr(fecha, 1, 7)`.
+        - If the user asks about a specific day, use `fecha` directly.
+        - If the user asks for a count, use `COUNT(*)` without aliases.
+        - If the user requests specific columns, include them explicitly in the SELECT statement.
+        - If the user asks for all available data, use `SELECT *`.
+        - Ensure that all filters (WHERE conditions) use exact column names and values.
+        - If the user asks for the last shot, use the highest `n_descarga` value.
+        - If the user query references a configuration, use `WHERE configuracion = ...`.
+        - The SQL query must be valid even if the user input is unstructured.
 
-    Convert the following user request into a precise SQL query:
-    "{question}"
+        Examples of user questions and expected SQL output:
+        - User Question: "Which year had the most shots?"
+            SQL Query:
+            SELECT substr(fecha, 1, 4), COUNT(*)
+            FROM data
+            GROUP BY strftime('%Y', fecha)
+            ORDER BY COUNT(*) DESC
+            LIMIT 1;
 
-    Return ONLY the SQL query with no extra text.
+        - User Question: "Which month had the most shots?"
+            SQL Query:
+            SELECT substr(fecha, 1, 7), COUNT(*)
+            FROM data
+            GROUP BY substr(fecha, 1, 7)
+            ORDER BY COUNT(*) DESC
+            LIMIT 1;
+
+        - User Question: "Which day had the most shots?"
+            SQL Query:
+            SELECT fecha, COUNT(*)
+            FROM data
+            GROUP BY fecha
+            ORDER BY COUNT(*) DESC
+            LIMIT 1;
+
+        Convert the following user request into a precise SQL query:
+        "{question}"
+
+        Return ONLY the SQL query with no extra text.
     """
 
     sql_query = query_llm(prompt)
