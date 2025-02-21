@@ -61,7 +61,6 @@ def main():
             else:
                 st.error("Failed to interpret request.")
         elif intent == "CSV":
-            print("LLEGO AQUI EN EL MAIN")
             if df is not None:
                 csv_response = query_csv(user_input)
                 st.write(csv_response if csv_response else "No relevant data found in CSV.")

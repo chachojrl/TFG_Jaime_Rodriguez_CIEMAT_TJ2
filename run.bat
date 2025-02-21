@@ -1,0 +1,19 @@
+@echo off
+
+echo Instalando dependencias...
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+
+echo Dependencias instaladas correctamente.
+
+echo Direccion en la que estoy
+cd
+
+echo Iniciando FastAPI con uvicorn en el directorio /src...
+start cmd /k "cd src && uvicorn csvllama2:app --reload"
+
+echo Iniciando Streamlit en una nueva terminal en el directorio /src...
+start cmd /k "cd src && streamlit run main.py"
+
+echo Procesos iniciados correctamente.
+exit

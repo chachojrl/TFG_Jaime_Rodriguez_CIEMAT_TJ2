@@ -22,7 +22,11 @@ CSV_FILE = "../data/processed/cleaned_csv_data.csv"
 def load_csv():
     """Loads the CSV into a Pandas DataFrame and cleans column names."""
     try:
-        df = pd.read_csv(CSV_FILE)
+        df = pd.read_csv(CSV_FILE, dtype={
+            "fecha": "string",
+            "hora": "string",
+            "validada": "string"
+        }, low_memory=False)
         df.columns = df.columns.str.strip().str.lower()
         return df.astype(str)
     except Exception as e:
@@ -180,8 +184,6 @@ def query_csv(question: str):
     """Processes a natural language question and converts it into an SQL query."""
     if data is None:
         return {"error": "CSV data not loaded."}
-    
-    print("LLEGO AQUI")  # Debugging statement
 
     prompt = f"""
         You are an AI that translates user queries into precise SQL queries.
@@ -192,58 +194,37 @@ def query_csv(question: str):
         Follow these strict rules:
         - Always generate a valid SQL query.
         - Always include `FROM data` in the query.
+        - Only return one single SQL statement.
         - Never use `AS` to rename columns.
-        - Never add comments or explanations.
+        - Never add comments, explanations, extra formatting, or multiple SQL queries.
         - Always use exact column names as they appear in the table.
         - The column 'fecha' is formatted as `YYYY/MM/DD`, where YYYY = Year, MM = Month, and DD = Day.
         - Always use lowercase column names.
         - If the user asks for a specific discharge number (N_DESCARGA), use `WHERE n_descarga = ...`
-        - If the user asks about a year, extract the year from 'fecha' using `substr(fecha, 1, 4)`."
+        - If the user asks about a year, extract the year from 'fecha' using `substr(fecha, 1, 4)`.
         - If the user asks about a month, extract the year and month from 'fecha' using `substr(fecha, 1, 7)`.
         - If the user asks about a specific day, use `fecha` directly.
         - If the user asks for a count, use `COUNT(*)` without aliases.
         - If the user requests specific columns, include them explicitly in the SELECT statement.
         - If the user asks for all available data, use `SELECT *`.
         - Ensure that all filters (WHERE conditions) use exact column names and values.
-        - If the user asks for the last shot, use the highest `n_descarga` value.
+        - If the user asks for the highest or lowest value of a numerical column, ensure to use: SELECT MAX(CAST(column_name AS INTEGER)) FROM data; or SELECT MIN(CAST(column_name AS INTEGER)) FROM data; replacing `column_name` with the appropriate column requested.
         - If the user query references a configuration, use `WHERE configuracion = ...`.
         - The SQL query must be valid even if the user input is unstructured.
-
-        Examples of user questions and expected SQL output:
-        - User Question: "Which year had the most shots?"
-            SQL Query:
-            SELECT substr(fecha, 1, 4), COUNT(*)
-            FROM data
-            GROUP BY substr(fecha, 1, 4)
-            ORDER BY COUNT(*) DESC
-            LIMIT 1;
-
-        - User Question: "Which month had the most shots?"
-            SQL Query:
-            SELECT substr(fecha, 1, 7), COUNT(*)
-            FROM data
-            GROUP BY substr(fecha, 1, 7)
-            ORDER BY COUNT(*) DESC
-            LIMIT 1;
-
-        - User Question: "Which day had the most shots?"
-            SQL Query:
-            SELECT fecha, COUNT(*)
-            FROM data
-            GROUP BY fecha
-            ORDER BY COUNT(*) DESC
-            LIMIT 1;
 
         Convert the following user request into a precise SQL query:
         "{question}"
 
-        Return ONLY the SQL query with no extra text.
+        Return ONLY the SQL query, with no extra text, no comments, no explanations, and no Markdown formatting.
     """
 
     sql_query = query_llm(prompt).strip()
     print("Generated SQL Query:", sql_query)  # Debugging output
 
-    if not sql_query or not sql_query.lower().startswith("select"):
+    # Ensure only a single valid SQL statement is returned
+    sql_query = sql_query.split(";")[0].strip()  # Keep only the first SQL statement before any semicolon
+
+    if not sql_query.lower().startswith("select"):
         return {"error": "Invalid SQL query generated."}
 
     return execute_sql_query(sql_query)

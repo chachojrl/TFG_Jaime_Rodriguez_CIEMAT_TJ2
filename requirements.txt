@@ -1,23 +1,17 @@
+nest_asyncio
+fastapi
+pydantic
 requests
-matplotlib
+re
+streamlit
 urllib3
 pandas
-langchain_community
-python-dotenv
-googletrans
-nest_asyncio
-ollama
+matplotlib
+os
+json
+dotenv
+ibm-watson-machine-learning
 pandasql
+langchain_community
+googletrans
 replicate
-streamlit
-fastapi
-uvicorn
-watchdog
-google-cloud-translate
-
-# Generate Spectograms to Excell
-openpyxl
-
-
-# Predictions
-scikit-learn
