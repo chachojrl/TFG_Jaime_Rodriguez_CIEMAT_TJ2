@@ -1,23 +1,16 @@
-import pandas as pd
-import ollama
-from dotenv import load_dotenv
-import os
 import nest_asyncio
-import pandasql as ps
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from ai_parser import query_csv
 
 # Apply async compatibility
 nest_asyncio.apply()
 
-# Load environment variables
-load_dotenv()
-
 # Define the global LLM model
-LLM_MODEL = "llama3"
+#LLM_MODEL = "llama3"
 
 # Load the CSV file into memory
-CSV_FILE = "../data/processed/cleaned_csv_data.csv"
+'''CSV_FILE = "../data/processed/cleaned_csv_data.csv"
 
 def load_csv():
     """Loads the CSV into a Pandas DataFrame and cleans column names."""
@@ -135,7 +128,7 @@ def query_csv(question: str):
     if not sql_query:
         return {"error": "Invalid SQL query generated."}
 
-    return execute_sql_query(sql_query)
+    return execute_sql_query(sql_query)'''
 
 # FastAPI Endpoint
 description = "API to process queries related to TJ-II experiment data."

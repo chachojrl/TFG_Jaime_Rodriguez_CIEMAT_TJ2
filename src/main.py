@@ -6,7 +6,7 @@ from data_fetcher import generate_url, fetch_data, extract_data_points
 from plotter import plot_data_per_signal
 from config_loader import load_keywords, load_signal_options
 import requests
-from csvllama2 import query_csv
+from ai_parser import query_csv
 
 # Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -61,6 +61,7 @@ def main():
             else:
                 st.error("Failed to interpret request.")
         elif intent == "CSV":
+            print("LLEGO AQUI EN EL MAIN")
             if df is not None:
                 csv_response = query_csv(user_input)
                 st.write(csv_response if csv_response else "No relevant data found in CSV.")
