@@ -1,17 +1,21 @@
-import ollama
-import json
 import os
+import json
 from dotenv import load_dotenv
+from ibm_watson_machine_learning.foundation_models import Model
 from config_loader import load_signal_options
+import pandas as pd
+import pandasql as ps
+import re
 
-# Cargar variables de entorno
+
+# Load environment variables
 load_dotenv()
 
-# Cargar señales válidas desde config_loader
+# Load valid signals from config_loader
 valid_signals = set(load_signal_options())
 
-# Definir el modelo global
-LLM_MODEL = "llama3"
+# Define IBM Watsonx.ai model details
+MODEL_ID = "meta-llama/llama-3-3-70b-instruct"
 
 CSV_FILE = "../data/processed/cleaned_csv_data.csv"
 
@@ -31,13 +35,27 @@ def load_csv():
 
 data = load_csv()
 
+# Define generation parameters
+GEN_PARMS = {
+    "DECODING_METHOD": "greedy",
+    "MIN_NEW_TOKENS": 1,
+    "MAX_NEW_TOKENS": 100
+}
+
+# Load project credentials
+PROJECT_ID = os.environ["PROJECT_ID"]
+CREDENTIALS = {
+    "apikey": os.environ["IBM_API_KEY"],  
+    "url": os.environ["IBM_WATSON_URL"]
+}
+
+# Initialize the IBM Watsonx.ai model
+model = Model(MODEL_ID, CREDENTIALS, GEN_PARMS, PROJECT_ID)
+
 def query_llm(prompt):
-    """Realiza una consulta al modelo Ollama y devuelve la respuesta."""
-    response = ollama.chat(
-        model=LLM_MODEL,
-        messages=[{"role": "user", "content": prompt}]
-    )["message"]["content"].strip()
-    return response
+    """Queries IBM Watsonx.ai LLM and returns the response."""
+    response = model.generate(prompt)
+    return response['results'][0]['generated_text'].strip()
 
 def parse_user_input_with_ai(user_input):
     """Extracts structured data from user input."""
@@ -67,7 +85,7 @@ def parse_user_input_with_ai(user_input):
         return None
 
 def determine_intent(user_input):
-    """Usa el modelo de IA para determinar si la solicitud es sobre CSV, gráficos o una consulta general."""
+    """Uses the LLM to determine if the request is about CSV, plotting, or general inquiry."""
     user_input_lower = user_input.lower()
     contains_signal = any(signal in user_input_lower for signal in valid_signals)
 
@@ -100,9 +118,23 @@ def determine_intent(user_input):
     - "Explica qué significa ICX" → GENERAL
     """
 
-    response = query_llm(prompt)
-    print(response)
-    return response.upper()
+    response = query_llm(prompt).strip()
+
+    # DEBUG: Print raw response before processing
+    print("LLM raw response:", response)
+
+    # Extract first valid category using regex
+    match = re.search(r'\b(PLOT|CSV|GENERAL)\b', response, re.IGNORECASE)
+    
+    if match:
+        return match.group(0).upper()  # Return the matched category in uppercase
+
+    # If extraction fails, default to "GENERAL"
+    return "GENERAL"
+
+
+
+
 
 def ask_general_ai(user_input):
     """Queries the AI model to answer general questions."""
@@ -144,7 +176,6 @@ def execute_sql_query(sql_query):
         return response
     except Exception as e:
         return {"error": f"SQL Execution Error: {e}"}
-
 
 def query_csv(question: str):
     """Processes a natural language question and converts it into an SQL query."""
