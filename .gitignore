@@ -1,6 +1,12 @@
 __pycache__/
 .env
 
+# venv
+venv/
+
+# Utilities
 /Utilities/similPatternTool/
+
+# Data
 /data/raw/preprocessed_spectograms/
 /data/spectograms/spectograms_for_ai_learning/

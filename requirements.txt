@@ -2,16 +2,22 @@ nest_asyncio
 fastapi
 pydantic
 requests
-re
 streamlit
 urllib3
 pandas
 matplotlib
-os
-json
+#json
 dotenv
 ibm-watson-machine-learning
 pandasql
 langchain_community
 googletrans
 replicate
+ollama
+
+# Classifier
+opencv-python 
+scikit-image 
+scikit-learn 
+joblib 
+openpyxl

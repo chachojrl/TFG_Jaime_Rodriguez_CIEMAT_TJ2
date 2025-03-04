@@ -3,3 +3,58 @@ IBM Cloud Pak for Data: https://eu-gb.dataplatform.cloud.ibm.com/docs/content/ws
 IBM WatsonX : https://eu-gb.dataplatform.cloud.ibm.com/docs/content/wsj/getting-started/welcome-main.html?context=wx&audience=wdp 
 
 latex par amemoria tfg (pedir plantilla a Alberto Diaz)
+
+Lista de referencias y documentación utilizada
+
+1️⃣ Lectura de Excel con pandas
+Fuente: Documentación oficial de pandas.read_excel()
+https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_excel.html
+Motivo: Para cargar el archivo clasified_spectrograms.xlsx con las etiquetas de MHD.
+
+2️⃣ Uso de OpenCV para cargar imágenes
+Fuente: Documentación oficial de OpenCV-Python
+https://docs.opencv.org/4.x/dc/d2e/tutorial_py_image_display.html
+Motivo: Leer imágenes PNG en escala de grises con cv2.imread() y redimensionarlas con cv2.resize().
+
+3️⃣ Extracción de características HOG (Histogram of Oriented Gradients)
+Fuente: Documentación de skimage.feature.hog (scikit-image)
+https://scikit-image.org/docs/stable/api/skimage.feature.html#skimage.feature.hog
+Motivo: Extraer características visuales relevantes para detectar patrones asociados a MHD.
+Nota: Eliminamos el argumento multichannel porque fue deprecado en scikit-image >= 0.19.
+Referencia sobre el cambio: https://github.com/scikit-image/scikit-image/issues/5546
+
+4️⃣ División del dataset (train/test split)
+Fuente: Documentación oficial de sklearn.model_selection.train_test_split
+https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html
+Motivo: Separar datos de entrenamiento y test para evaluar el rendimiento del modelo.
+
+5️⃣ Clasificación con Support Vector Machine (SVM)
+Fuente: Documentación oficial de sklearn.svm.SVC
+https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
+Motivo: Utilizar un clasificador lineal eficiente para detectar MHD.
+
+6️⃣ Reporte de métricas de clasificación
+Fuente: Documentación de sklearn.metrics.classification_report
+https://scikit-learn.org/stable/modules/generated/sklearn.metrics.classification_report.html
+Motivo: Evaluar el rendimiento del modelo sobre los datos de test.
+
+7️⃣ Guardado y carga de modelos con joblib
+Fuente: Documentación oficial de joblib.dump() y joblib.load()
+https://joblib.readthedocs.io/en/latest/generated/joblib.dump.html
+https://joblib.readthedocs.io/en/latest/generated/joblib.load.html
+Motivo: Guardar el modelo entrenado para futuras predicciones sin necesidad de volver a entrenar.
+
+8️⃣ Manejo de errores al cargar imágenes (archivos faltantes)
+Fuente: Inspiración de prácticas comunes en competiciones de Kaggle
+https://www.kaggle.com/code/stassl/displaying-and-preprocessing-the-images
+Motivo: Detectar y registrar advertencias si alguna de las 3 imágenes de cada espectrograma falta.
+
+9️⃣ Pipeline general de Machine Learning aplicado a imágenes
+Fuente: Ejemplo oficial de scikit-learn con clasificación de imágenes (Digits dataset)
+https://scikit-learn.org/stable/auto_examples/classification/plot_digits_classification.html
+Motivo: Inspiración general para el flujo de trabajo (carga de datos, extracción de características, entrenamiento, evaluación y predicción).
+
+🔟 Mejores prácticas en nombres de archivos y estructura de carpetas en proyectos ML
+Fuente: Guía de buenas prácticas en proyectos de machine learning (ml-ops.org)
+https://ml-ops.org/content/best-practices-for-managing-image-data
+Motivo: Mantener consistencia en nombres (23809.png, 23809_N.png, etc.) y estructura de carpetas.
