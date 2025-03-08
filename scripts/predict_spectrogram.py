@@ -6,6 +6,7 @@ import subprocess
 import sys
 from skimage.feature import hog
 
+
 # ---------------------- CONFIGURATION ---------------------- #
 # Paths
 model_path = "mhd_detector_model.pkl"
@@ -46,7 +47,7 @@ if not spectrogram_found:
         user_input = input(f"Do you want to generate the spectrogram using {plot_script}? (y/n): ").strip().lower()
         if user_input == "y":
             print(f"Generating spectrogram using {plot_script}...")
-            subprocess.run(["python", plot_script, shot_number])
+            subprocess.run([sys.executable, "plot_spectogram.py", shot_number])
 
             # Re-check if spectrogram was generated
             for folder in input_folders:
@@ -59,10 +60,10 @@ if not spectrogram_found:
                 print(f"Error: Spectrogram {shot_number} could not be generated.")
                 sys.exit(1)
         else:
-            print("Spectrogram generation skipped. Exiting.")
+            print("Spectrogram generation skipped.")
             sys.exit(1)
     else:
-        print(f"No corresponding raw data file found in {utilities_folder}. Exiting.")
+        print(f"No corresponding raw data file found. Exiting.")
         sys.exit(1)
 
 # ---------------------- LOAD AND PROCESS SPECTROGRAM ---------------------- #
