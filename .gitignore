@@ -5,8 +5,9 @@ __pycache__/
 venv/
 
 # Utilities
-/Utilities/similPatternTool/
+utilities/similPatternTool/
 
 # Data
-/data/raw/preprocessed_spectograms/
-/data/spectograms/spectograms_for_ai_learning/
+data/raw/preprocessed_spectograms/
+data/spectograms/spectograms_for_ai_learning/
+data/spectograms/spectograms_for_try/
