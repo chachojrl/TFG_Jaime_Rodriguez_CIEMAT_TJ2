@@ -2,9 +2,9 @@ nest_asyncio
 fastapi
 pydantic
 requests
-streamlit
+#streamlit
 urllib3
-pandas
+#pandas
 matplotlib
 #json
 dotenv

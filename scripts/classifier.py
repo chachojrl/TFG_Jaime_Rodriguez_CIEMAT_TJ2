@@ -8,43 +8,49 @@ from skimage.feature import hog
 import joblib
 from sklearn.metrics import classification_report, accuracy_score
 
-# Path to the folder containing spectrogram images
+# Ruta a las imágenes de los espectrogramas
 IMAGES_FOLDER = "../data/spectograms/spectograms_for_ai_learning"
 
-# Load data from the Excel file
+# Ruta al archivo Excel con etiquetas
+EXCEL_PATH = "../data/processed/clasified_spectrograms.xlsx"
+
+# Función para cargar etiquetas desde Excel
 def load_labels_from_excel(excel_path):
     df = pd.read_excel(excel_path)
-    df['MHD'] = df['MHD'].map({'Y': 1, 'N': 0})
+    df['MHD'] = df['MHD'].map({'Y': 1, 'N': 0})  # Convertir a valores numéricos
     return df
 
-# Load the 3 images for each spectrogram
+# Cargar imágenes de un shot específico
 def load_images_for_shot(shot_number):
+    print(shot_number)
     filenames = [
-        f"{shot_number}.png",          # color
-        f"{shot_number}_N.png",        # heatmap
-        f"{shot_number}_N_bw.png"      # grayscale
+        f"{shot_number}.png",          # Color
+        f"{shot_number}_N.png",        # Heatmap
+        f"{shot_number}_N_bw.png"      # Escala de grises
     ]
     images = []
+    
     for filename in filenames:
         img_path = os.path.join(IMAGES_FOLDER, filename)
         if os.path.exists(img_path):
             img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-            images.append(cv2.resize(img, (128, 128)))
+            images.append(cv2.resize(img, (128, 128)))  # Redimensionar imágenes
         else:
             print(f"Warning: {img_path} not found")
-            return None
+            return None  # Si falta una imagen, descartar el shot
+    
     return images
 
-# Extract HOG features from the 3 concatenated images
+# Extraer características HOG de las imágenes concatenadas
 def extract_features_from_images(images):
     hog_features = []
     for img in images:
         features = hog(img, orientations=9, pixels_per_cell=(8, 8),
                        cells_per_block=(2, 2), visualize=False)
-        hog_features.extend(features)  # Combine features from all 3 images
+        hog_features.extend(features)  # Concatenar features de las 3 imágenes
     return np.array(hog_features)
 
-# Load the full dataset
+# Cargar y procesar el dataset completo
 def load_dataset(excel_path):
     df = load_labels_from_excel(excel_path)
 
@@ -61,9 +67,16 @@ def load_dataset(excel_path):
             all_features.append(features)
             all_labels.append(mhd_label)
 
-    return np.array(all_features), np.array(all_labels)
+    # Convertir a arrays de NumPy
+    X = np.array(all_features)
+    y = np.array(all_labels)
 
-# Train and evaluate the model
+    if len(X) == 0:
+        raise ValueError("No se encontraron datos válidos para entrenar el modelo.")
+
+    return X, y
+
+# Entrenar y evaluar el modelo
 def train_and_evaluate_model(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -75,12 +88,13 @@ def train_and_evaluate_model(X, y):
     print(classification_report(y_test, y_pred))
     print(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
 
+    # Guardar el modelo entrenado
     joblib.dump(model, "mhd_detector_model.pkl")
-    print("Model saved as 'mhd_detector_model.pkl'")
+    print("Modelo guardado como 'mhd_detector_model.pkl'")
 
     return model
 
-# Predict whether a new spectrogram has MHD
+# Predecir MHD en un nuevo shot usando el modelo entrenado
 def predict_shot(model, shot_number):
     images = load_images_for_shot(shot_number)
     if images is None:
@@ -90,20 +104,24 @@ def predict_shot(model, shot_number):
     prediction = model.predict([features])[0]
     return prediction
 
-# Main
+# Ejecutar todo el proceso automáticamente
 if __name__ == "__main__":
-    excel_path = "../data/processed/clasified_spectrograms.xlsx"
+    print("Cargando dataset y entrenando modelo...")
 
-    print("Loading dataset and training model...")
-    X, y = load_dataset(excel_path)
-    print(f"Dataset loaded with {len(X)} samples")
+    try:
+        X, y = load_dataset(EXCEL_PATH)
+        print(f"Dataset cargado con {len(X)} muestras")
 
-    model = train_and_evaluate_model(X, y)
+        model = train_and_evaluate_model(X, y)
 
-    test_shot = 37986  # Shot number to predict
-    prediction = predict_shot(model, test_shot)
+        # Probar con un shot aleatorio del dataset
+        test_shot = np.random.choice(y.shape[0])
+        prediction = predict_shot(model, test_shot)
 
-    if prediction is not None:
-        print(f"Does shot {test_shot} have MHD? {'Yes' if prediction == 1 else 'No'}")
-    else:
-        print(f"No images found for shot {test_shot}")
+        if prediction is not None:
+            print(f"¿El shot {test_shot} tiene MHD? {'Sí' if prediction == 1 else 'No'}")
+        else:
+            print(f"No se encontraron imágenes para el shot {test_shot}")
+
+    except Exception as e:
+        print(f"Error durante la ejecución: {e}")
