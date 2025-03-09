@@ -1,18 +1,19 @@
 import streamlit as st
 import urllib3
 import pandas as pd
-from ai_parser import parse_user_input_with_ai, determine_intent, ask_general_ai
+import sys
+from ai_parser_2 import parse_user_input_with_ai, determine_intent, ask_general_ai, clean_answer
 from data_fetcher import generate_url, fetch_data, extract_data_points
 from plotter import plot_data_per_signal
 from config_loader import load_keywords, load_signal_options
 import requests
-from ai_parser_1 import query_csv
+
 
 # Disable SSL warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://info.fusion.ciemat.es/cgi-bin/TJII_data.cgi"
-CSV_FILE = "../data/processed/cleaned_csv_data.csv"  # Asegúrate de colocar el path correcto
+CSV_FILE = "../data/processed/cleaned_csv_data.csv" 
 
 # Cargar el CSV en memoria
 @st.cache_data
@@ -66,6 +67,28 @@ def main():
                 st.write(csv_response if csv_response else "No relevant data found in CSV.")
             else:
                 st.error("CSV data is not available.")
+        elif intent == "PREDICT":
+            shot_number = parse_user_input_for_shot_number(user_input)
+            try:
+                # Ejecutar el script de predicción y capturar la salida
+                result = subprocess.run(
+                    [sys.executable, "predict_spectogram.py", shot_number], 
+                    capture_output=True, text=True
+                )
+
+                # Capturar la salida estándar (stdout) del script
+                raw_output = result.stdout.strip()
+
+                if raw_output:
+                    # Pasar la salida por el LLM para limpiarla y mejorarla
+                    refined_response = clean_answer(raw_output)
+                    st.success(refined_response)
+                else:
+                    st.error("No valid output received from the prediction script.")
+            except Exception as e:
+                st.error(f"Error running spectrogram prediction: {e}")
+
+
         else:
             response = ask_general_ai(user_input)
             st.write(response if response else "No response.")

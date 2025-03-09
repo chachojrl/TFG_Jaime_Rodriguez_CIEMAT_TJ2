@@ -7,10 +7,10 @@ from ai_parser import query_csv
 nest_asyncio.apply()
 
 # Define the global LLM model
-#LLM_MODEL = "llama3"
+LLM_MODEL = "llama3"
 
 # Load the CSV file into memory
-'''CSV_FILE = "../data/processed/cleaned_csv_data.csv"
+CSV_FILE = "../data/processed/cleaned_csv_data.csv"
 
 def load_csv():
     """Loads the CSV into a Pandas DataFrame and cleans column names."""
@@ -128,7 +128,7 @@ def query_csv(question: str):
     if not sql_query:
         return {"error": "Invalid SQL query generated."}
 
-    return execute_sql_query(sql_query)'''
+    return execute_sql_query(sql_query)
 
 # FastAPI Endpoint
 description = "API to process queries related to TJ-II experiment data."

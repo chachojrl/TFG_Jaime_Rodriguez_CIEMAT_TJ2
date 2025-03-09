@@ -57,6 +57,39 @@ def query_llm(prompt):
     response = model.generate(prompt)
     return response['results'][0]['generated_text'].strip()
 
+def parse_user_input_for_shot_number(user_input):
+    """Extracts shot number from user input."""
+    prompt = f"""
+    You are an AI that extracts the first full number from the user request:
+    - "shot": integer (discharge number)
+
+    Extract the number from the following input:
+    "{user_input}"
+
+    Return ONLY the response as an integer.
+    Example Output:
+    57546
+    """
+    response = query_llm(prompt)
+    
+    try:
+        return int(response)  # Convertir a entero para asegurar que es válido
+    except ValueError:
+        print("Error parsing shot number:", response)
+        return None
+    
+def clean_answer(user_input):
+    """Limpia la respuesta usando el modelo LLM."""
+    prompt = f"""
+    You are an AI that cleans user input and returns a clear and concise version.
+    
+    Clean the following input:
+    "{user_input}"
+
+    Return ONLY the cleaned response as a string.
+    """
+    return query_llm(prompt)
+
 def parse_user_input_with_ai(user_input):
     """Extracts structured data from user input."""
     prompt = f"""
@@ -78,6 +111,8 @@ def parse_user_input_with_ai(user_input):
 
     response = query_llm(prompt)
 
+    return response
+
     try:
         return json.loads(response)
     except json.JSONDecodeError:
@@ -85,7 +120,7 @@ def parse_user_input_with_ai(user_input):
         return None
 
 def determine_intent(user_input):
-    """Uses the LLM to determine if the request is about CSV, plotting, or general inquiry."""
+    """Usa el modelo de IA para determinar si la solicitud es sobre CSV, gráficos, prediccion o una consulta general."""
     user_input_lower = user_input.lower()
     contains_signal = any(signal in user_input_lower for signal in valid_signals)
 
@@ -97,44 +132,33 @@ def determine_intent(user_input):
     The possible categories are:
     - "PLOT": If the user is requesting a diagram, graph, or visualization of any signal.
     - "CSV": If the user is requesting specific numerical or textual data from the dataset.
+    - "PREDICT": If the user is requesting information about a spectogram or MHD. 
     - "GENERAL": If the question does not fall into the above categories.
 
     STRICT CLASSIFICATION RULES:
     - If the user asks **"how many"**, **"cuántos"**, or any question about the **count of records**, classify it as `"CSV"`.
     - If the user asks for **specific data** (dates, shot numbers, parameters), classify it as `"CSV"`.
     - If the user asks for a **graph, visualization, or plot**, classify it as `"PLOT"`.
+    - If the user ask for a **spectogram or mhd**, classify it as `"PREDICT"`.
     - If the question is a general explanation request (e.g., "what is X?"), classify it as `"GENERAL"`.
     
     Classify the following user request:
     "{user_input}"
 
-    Return ONLY one word: "PLOT", "CSV", or "GENERAL".
+    Return ONLY one word: "PLOT", "CSV", "PREDICT" or "GENERAL".
     No extra words, no explanations, no formatting, and no alternative choices.
 
     Examples:
     - "Cuántos shots se hicieron en 2024?" → CSV
     - "Dame la tabla con los datos de 2023" → CSV
     - "¿Puedes mostrarme un gráfico de TFI?" → PLOT
+    - "¿La descarga 57547 tiene mhd?" → PREDICT
     - "Explica qué significa ICX" → GENERAL
     """
 
-    response = query_llm(prompt).strip()
-
-    # DEBUG: Print raw response before processing
-    print("LLM raw response:", response)
-
-    # Extract first valid category using regex
-    match = re.search(r'\b(PLOT|CSV|GENERAL)\b', response, re.IGNORECASE)
-    
-    if match:
-        return match.group(0).upper()  # Return the matched category in uppercase
-
-    # If extraction fails, default to "GENERAL"
-    return "GENERAL"
-
-
-
-
+    response = query_llm(prompt)
+    print(response)
+    return response.upper()
 
 def ask_general_ai(user_input):
     """Queries the AI model to answer general questions."""
@@ -176,6 +200,7 @@ def execute_sql_query(sql_query):
         return response
     except Exception as e:
         return {"error": f"SQL Execution Error: {e}"}
+
 
 def query_csv(question: str):
     """Processes a natural language question and converts it into an SQL query."""
