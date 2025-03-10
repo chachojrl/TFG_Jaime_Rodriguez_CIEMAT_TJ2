@@ -1,97 +1,144 @@
-import streamlit as st
+import gradio as gr
 import urllib3
 import pandas as pd
+import requests
+import subprocess
 import sys
-from ai_parser_2 import parse_user_input_with_ai, determine_intent, ask_general_ai, clean_answer
+import os
+import certifi
+from ai_parser import parse_user_input_with_ai, determine_intent, ask_general_ai, clean_answer, parse_user_input_for_shot_number
 from data_fetcher import generate_url, fetch_data, extract_data_points
 from plotter import plot_data_per_signal
 from config_loader import load_keywords, load_signal_options
-import requests
 
-
-# Disable SSL warnings
+# ---------------------- CONFIGURACIÓN ---------------------- #
+os.environ["SSL_CERT_FILE"] = certifi.where()
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-BASE_URL = "https://info.fusion.ciemat.es/cgi-bin/TJII_data.cgi"
-CSV_FILE = "../data/processed/cleaned_csv_data.csv" 
+print(certifi.where())
 
-# Cargar el CSV en memoria
-@st.cache_data
+BASE_URL = "https://info.fusion.ciemat.es/cgi-bin/TJII_data.cgi"
+CSV_FILE = "../data/processed/cleaned_csv_data.csv"
+
+# Cargar CSV
 def load_csv():
     try:
-        df = pd.read_csv(CSV_FILE)
-        return df
+        return pd.read_csv(CSV_FILE)
     except Exception as e:
-        st.error(f"Error loading CSV: {e}")
-        return None
+        return f"Error loading CSV: {e}"
 
-def ask_api(question):
-    """Sends a question to the external API."""
-    response = requests.post("http://localhost:8000/ask", json={"question": question})
-    return response.json() if response.status_code == 200 else None
+df = load_csv()
+keywords = load_keywords()
+valid_signals = load_signal_options()
 
-def main():
-    st.title("Unified TJ-II Chatbot")
-    user_input = st.text_input("Ask a question or request a plot:")
-    
-    keywords = load_keywords()
-    valid_signals = load_signal_options()
-    df = load_csv()
-    
-    if st.button("Submit"):
-        intent = determine_intent(user_input)
+# ---------------------- FUNCIÓN PARA EJECUTAR `predict_spectogram.py` ---------------------- #
+import os
+import subprocess
+import sys
 
-        if intent == "PLOT":
-            parsed_data = parse_user_input_with_ai(user_input)
-            if parsed_data and "shot" in parsed_data:
-                shot = parsed_data["shot"]
-                tstart = parsed_data.get("tstart", 0)
-                tstop = parsed_data.get("tstop", 2000)
-                signals = [sig for sig in parsed_data.get("signals", []) if sig in valid_signals]
-                
-                if signals:
-                    url = generate_url(BASE_URL, shot, len(signals), signals, ["1.00"] * len(signals), tstart, tstop)
-                    html_content = fetch_data(url)
-                    if html_content:
-                        data_points_dict = extract_data_points(html_content, signals)
-                        plot_data_per_signal(data_points_dict)
+def run_prediction(shot_number, generate_if_missing="No"):
+    """Ejecuta `predict_spectogram.py`, captura su salida y devuelve mensaje e imágenes."""
+    try:
+        result = subprocess.run(
+            [sys.executable, "predict_spectogram.py", str(shot_number), generate_if_missing],
+            capture_output=True, text=True
+        )
+
+        output_lines = result.stdout.strip().split("\n")
+        message = output_lines[0]  # Mensaje de predicción o error
+        images = [None]  # Inicializar sin imágenes
+
+        if "ERROR" in message or "WARNING" in message:
+            return message, *images
+
+        if "SUCCESS" in message:
+            primary_folder = "./spectograms/spectograms_for_try"
+            secondary_folder = "./spectograms/spectograms_for_ai_learning"
+
+            # Ruta de la imagen en el primer intento
+            image_path = f"{primary_folder}/{shot_number}.png"
+
+            # Si no existe, probar con la carpeta secundaria
+            if not os.path.exists(image_path):
+                image_path = f"{secondary_folder}/{shot_number}.png"
+
+                # Si tampoco existe en la carpeta secundaria, dar error
+                if not os.path.exists(image_path):
+                    return f"Error: Image for shot {shot_number} not found in both directories.", None
+
+            message = clean_answer(message)
+            return message, image_path
+
+    except Exception as e:
+        return f"Error running prediction script: {e}", None
+
+
+# ---------------------- FUNCIÓN PRINCIPAL DEL CHATBOT ---------------------- #
+def chatbot_response(user_input):
+    """Determina la intención del usuario y ejecuta la acción correspondiente."""
+    intent = determine_intent(user_input)
+
+    if intent == "PLOT":
+        parsed_data = parse_user_input_with_ai(user_input)
+        if parsed_data and "shot" in parsed_data:
+            shot = parsed_data["shot"]
+            tstart = parsed_data.get("tstart", 0)
+            tstop = parsed_data.get("tstop", 2000)
+            signals = [sig for sig in parsed_data.get("signals", []) if sig in valid_signals]
+
+            if signals:
+                url = generate_url(BASE_URL, shot, len(signals), signals, ["1.00"] * len(signals), tstart, tstop)
+                html_content = fetch_data(url)
+
+                if html_content:
+                    data_points_dict = extract_data_points(html_content, signals)
+                    plots = plot_data_per_signal(data_points_dict)
+
+                    if plots:
+                        return f"Plot generated for shot {shot}.", plots, None, None
                     else:
-                        st.error("No data retrieved.")
+                        return f"Error: No plots could be generated for {shot}.", None, None, None
                 else:
-                    st.error("No valid signals found.")
+                    return "No data retrieved.", None, None, None
             else:
-                st.error("Failed to interpret request.")
-        elif intent == "CSV":
-            if df is not None:
-                csv_response = query_csv(user_input)
-                st.write(csv_response if csv_response else "No relevant data found in CSV.")
-            else:
-                st.error("CSV data is not available.")
-        elif intent == "PREDICT":
-            shot_number = parse_user_input_for_shot_number(user_input)
-            try:
-                # Ejecutar el script de predicción y capturar la salida
-                result = subprocess.run(
-                    [sys.executable, "predict_spectogram.py", shot_number], 
-                    capture_output=True, text=True
-                )
-
-                # Capturar la salida estándar (stdout) del script
-                raw_output = result.stdout.strip()
-
-                if raw_output:
-                    # Pasar la salida por el LLM para limpiarla y mejorarla
-                    refined_response = clean_answer(raw_output)
-                    st.success(refined_response)
-                else:
-                    st.error("No valid output received from the prediction script.")
-            except Exception as e:
-                st.error(f"Error running spectrogram prediction: {e}")
-
-
+                return "No valid signals found.", None, None, None
         else:
-            response = ask_general_ai(user_input)
-            st.write(response if response else "No response.")
+            return "Failed to interpret request.", None, None, None
 
+    elif intent == "CSV":
+        if isinstance(df, pd.DataFrame):
+            csv_response = query_csv(user_input)
+            return csv_response if csv_response else "No relevant data found in CSV.", None, None, None
+        else:
+            return "CSV data is not available.", None, None, None
+
+    elif intent == "PREDICT":
+        shot_number = parse_user_input_for_shot_number(user_input)
+        print(shot_number)
+        generate_if_missing = "Yes"
+
+        result_text, img1 = run_prediction(shot_number, generate_if_missing) #, img2, img3
+
+        return result_text, img1 #, img2, img3
+
+    else:
+        response = ask_general_ai(user_input)
+        return response if response else "No response.", None, None, None
+
+# ---------------------- INTERFAZ DE GRADIO ---------------------- #
+interface = gr.Interface(
+    fn=chatbot_response,
+    inputs=gr.Textbox(label="Ask a question or request a plot:"),
+    outputs=[
+        gr.Textbox(label="Response / Prediction Result"),
+        gr.Image(label="Image"),
+        #gr.Image(label="N Spectrogram"),
+        #gr.Image(label="N_bw Spectrogram"),
+    ],
+    title="Unified TJ-II Chatbot",
+    description="Chatbot para análisis de espectrogramas del TJ-II."
+)
+
+# Ejecutar Gradio
 if __name__ == "__main__":
-    main()
+    interface.launch()

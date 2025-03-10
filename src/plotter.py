@@ -1,11 +1,10 @@
 import matplotlib.pyplot as plt
-import streamlit as st
 import re
 
 def group_signals(signals):
-    
+    """Agrupa señales por prefijo común usando expresiones regulares."""
     grouped_signals = {}
-    
+
     for signal in signals:
         match = re.match(r"([A-Za-z_]+)\d*", signal)
         if match:
@@ -15,13 +14,13 @@ def group_signals(signals):
             grouped_signals[prefix].append(signal)
         else:
             grouped_signals[signal] = [signal]
-    
+
     return grouped_signals
 
 def plot_data_per_signal(data_points_dict):
-
+    """Genera gráficos por grupos de señales y los devuelve como una lista de figuras."""
     grouped_signals = group_signals(data_points_dict.keys())
-    print(grouped_signals.items())
+    figs = []  # Lista para almacenar figuras
 
     for group_name, signal_names in grouped_signals.items():
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -36,6 +35,7 @@ def plot_data_per_signal(data_points_dict):
         ax.set_ylabel("Value")
         ax.legend()
         ax.grid()
-        st.pyplot(fig)
-        plt.close(fig)
 
+        figs.append(fig)  # Agregar la figura a la lista
+
+    return figs  # Devuelve la lista de figuras para que Gradio las procese

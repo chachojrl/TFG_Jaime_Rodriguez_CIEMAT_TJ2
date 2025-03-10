@@ -1,7 +1,13 @@
 import json
 import os
+import ollama
 from dotenv import load_dotenv
 from config_loader import load_signal_options
+import json
+from ibm_watson_machine_learning.foundation_models import Model
+import pandas as pd
+import pandasql as ps
+import re
 
 
 
@@ -16,17 +22,6 @@ LLM_MODEL = "llama3"
 
 CSV_FILE = "../data/processed/cleaned_csv_data.csv"
 
-def clean_answer(user_input):
-    """Limpia la respuesta usando el modelo LLM."""
-    prompt = f"""
-    You are an AI that cleans user input and returns a clear and concise version.
-    
-    Clean the following input:
-    "{user_input}"
-
-    Return ONLY the cleaned response as a string.
-    """
-    return query_llm(prompt)
     
 
 def load_csv():
@@ -54,10 +49,11 @@ def query_llm(prompt):
     return response
 
 def parse_user_input_for_shot_number(user_input):
-    """Extracts shot number from user input."""
+    """Extrae el número de descarga (shot number) del input del usuario."""
     prompt = f"""
-    You are an AI that extracts the first full number from the user request:
-    - "shot": integer (discharge number)
+    You are an AI that extracts the first full number from the user request.
+    - The number represents the shot (discharge) number.
+    - Always return ONLY the number, with no words or additional characters.
 
     Extract the number from the following input:
     "{user_input}"
@@ -66,13 +62,39 @@ def parse_user_input_for_shot_number(user_input):
     Example Output:
     57546
     """
-    response = query_llm(prompt)
+    response = query_llm(prompt).strip()
+
+    # 🔹 Extraer solo el primer número válido de la respuesta
+    match = re.search(r"\d+", response)
     
-    try:
-        return int(response)  # Convertir a entero para asegurar que es válido
-    except ValueError:
-        print("Error parsing shot number:", response)
+    if match:
+        shot_number = int(match.group())  # Convertir a entero
+        return shot_number
+    else:
+        print("Error: No valid shot number found in response:", response)
         return None
+
+    
+def clean_answer(user_input):
+    """Limpia la respuesta usando el modelo LLM."""
+    prompt = f"""
+    You are an AI that cleans user input and returns a clear and concise version.
+    
+    Clean the following input:
+    "{user_input}"
+    
+    Example Input 1:
+    "Success: Spectrogram 56950 MHD? Yes"
+    Example Output 1:
+    "The spectogram 56950 has MHD"
+    Example Input 2:
+    "Success: Spectrogram 56950 MHD? No"
+    Example Output 1:
+    "The spectogram 56950 does not have MHD"
+
+    Return ONLY the cleaned response as a string.
+    """
+    return query_llm(prompt)
 
 def parse_user_input_with_ai(user_input):
     """Extracts structured data from user input."""
@@ -104,7 +126,7 @@ def parse_user_input_with_ai(user_input):
         return None
 
 def determine_intent(user_input):
-    """Usa el modelo de IA para determinar si la solicitud es sobre CSV, gráficos, prediccion o una consulta general."""
+    """Usa el modelo de IA para determinar si la solicitud es sobre CSV, gráficos, predicción o una consulta general."""
     user_input_lower = user_input.lower()
     contains_signal = any(signal in user_input_lower for signal in valid_signals)
 
@@ -116,16 +138,16 @@ def determine_intent(user_input):
     The possible categories are:
     - "PLOT": If the user is requesting a diagram, graph, or visualization of any signal.
     - "CSV": If the user is requesting specific numerical or textual data from the dataset.
-    - "PREDICT": If the user is requesting information about a spectogram or MHD. 
+    - "PREDICT": If the user is requesting information about a spectrogram or MHD. 
     - "GENERAL": If the question does not fall into the above categories.
 
     STRICT CLASSIFICATION RULES:
     - If the user asks **"how many"**, **"cuántos"**, or any question about the **count of records**, classify it as `"CSV"`.
     - If the user asks for **specific data** (dates, shot numbers, parameters), classify it as `"CSV"`.
     - If the user asks for a **graph, visualization, or plot**, classify it as `"PLOT"`.
-    - If the user ask for a **spectogram or mhd**, classify it as `"PREDICT"`.
+    - If the user asks for a **spectrogram or MHD**, classify it as `"PREDICT"`.
     - If the question is a general explanation request (e.g., "what is X?"), classify it as `"GENERAL"`.
-    
+
     Classify the following user request:
     "{user_input}"
 
@@ -140,9 +162,25 @@ def determine_intent(user_input):
     - "Explica qué significa ICX" → GENERAL
     """
 
-    response = query_llm(prompt)
+    response = query_llm(prompt).strip()  # 🔹 Limpiar espacios en blanco
     print(response)
-    return response.upper()
+
+    # 🔹 Extraer solo la última línea de la respuesta, que debería ser la clasificación
+    last_line = response.split("\n")[-1].strip().upper()
+
+    # 🔹 Eliminar caracteres extra o comentarios que puedan estar al final
+    last_line = last_line.split("#")[0].strip()
+    print(last_line)
+
+    # 🔹 Asegurar que la respuesta sea válida
+    valid_intents = {"PLOT", "CSV", "PREDICT", "GENERAL"}
+    if last_line not in valid_intents:
+        last_line = "PREDICT"
+
+    print(f"INTENT: {last_line}")  # 🔹 Debugging: Verifica la respuesta limpia
+    return last_line
+
+
 
 def ask_general_ai(user_input):
     """Queries the AI model to answer general questions."""
