@@ -92,18 +92,18 @@ def chatbot_response(user_input):
 
                 if html_content:
                     data_points_dict = extract_data_points(html_content, signals)
-                    plots = plot_data_per_signal(data_points_dict)
+                    plot_paths = plot_data_per_signal(data_points_dict)
 
-                    if plots:
-                        return f"Plot generated for shot {shot}.", plots, None, None
+                    if plot_paths:
+                        return f"Plot generated for shot {shot}.", plot_paths[0]
                     else:
-                        return f"Error: No plots could be generated for {shot}.", None, None, None
+                        return f"Error: No plots could be generated for {shot}.", None
                 else:
-                    return "No data retrieved.", None, None, None
+                    return "No data retrieved.", None
             else:
-                return "No valid signals found.", None, None, None
+                return "No valid signals found.", None
         else:
-            return "Failed to interpret request.", None, None, None
+            return "Failed to interpret request.", None
 
     elif intent == "CSV":
         if isinstance(df, pd.DataFrame):
@@ -117,9 +117,9 @@ def chatbot_response(user_input):
         print(shot_number)
         generate_if_missing = "Yes"
 
-        result_text, img1 = run_prediction(shot_number, generate_if_missing) #, img2, img3
+        result_text, img1 = run_prediction(shot_number, generate_if_missing)
 
-        return result_text, img1 #, img2, img3
+        return result_text, img1
 
     else:
         response = ask_general_ai(user_input)

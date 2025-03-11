@@ -115,12 +115,15 @@ def parse_user_input_with_ai(user_input):
     {{ "shot": 54573, "tstart": 0.0, "tstop": 2000.0, "signals": ["TFI", "ICX"] }}
     """
 
-    response = query_llm(prompt)
-
-    return response
+    response = query_llm(prompt)  # Se obtiene la respuesta como string
 
     try:
-        return json.loads(response)
+        parsed_response = json.loads(response)  # Convertir string a JSON
+        if isinstance(parsed_response, dict):  # Asegurar que es un diccionario
+            return parsed_response
+        else:
+            print("Error: Response is not a dictionary", response)
+            return None
     except json.JSONDecodeError:
         print("Error parsing JSON:", response)
         return None
