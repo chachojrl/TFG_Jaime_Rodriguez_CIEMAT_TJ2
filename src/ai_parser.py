@@ -168,6 +168,7 @@ def determine_intent(user_input):
     Examples:
     - "Cuántos shots se hicieron en 2024?" → CSV
     - "Dame la tabla con los datos de 2023" → CSV
+    - "Que fecha tiene la última descarga" → CSV
     - "¿Puedes mostrarme un gráfico de TFI?" → PLOT
     - "¿La descarga 57547 tiene mhd?" → PREDICT
     - "Explica qué significa ICX" → GENERAL
@@ -204,7 +205,18 @@ def ask_general_ai(user_input):
 
     return query_llm(prompt)
 
-def execute_sql_query(sql_query):
+def clean_csv_answers(user_input):
+    """Queries the AI model to answer general questions."""
+    prompt = f"""
+    You are an advanced AI that provides helpful, clear, and concise answers.
+    Answer the following question accurately:
+
+    "{user_input}"
+    """
+
+    return query_llm(prompt)
+
+def execute_sql_query(sql_query, question):
     """Executes an SQL query on the loaded DataFrame."""
     if data is None:
         return {"error": "CSV data not loaded."}
@@ -222,11 +234,12 @@ def execute_sql_query(sql_query):
         You are an AI that translates JSON to natural language.
         
         Convert the following JSON into a precise natural language description:
-        "{result_json}"
+        "{result_json}", and then using the folowing question: "{question}", wich is the question to that answer
+        we want, to give a better and more define answer
 
-        - If the Natural Language has a number writen, put it as a numeric number
+        - If the response contains numbers, use numerical digits instead of words
 
-        Return ONLY the natural language response.
+        Return ONLY the natural language response with no extra text, no comments, no explanations.
         """
 
         response = query_llm(prompt)
@@ -282,4 +295,4 @@ def query_csv(question: str):
     if not sql_query.lower().startswith("select"):
         return {"error": "Invalid SQL query generated."}
 
-    return execute_sql_query(sql_query)
+    return execute_sql_query(sql_query, question)

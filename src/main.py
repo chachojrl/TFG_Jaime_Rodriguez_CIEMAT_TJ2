@@ -7,7 +7,7 @@ import sys
 import os
 import certifi
 import io
-from ai_parser import parse_user_input_with_ai, determine_intent, ask_general_ai, clean_answer, parse_user_input_for_shot_number
+from ai_parser import parse_user_input_with_ai, determine_intent, ask_general_ai, clean_answer, parse_user_input_for_shot_number, query_csv
 from data_fetcher import generate_url, fetch_data, extract_data_points
 from plotter import plot_data_per_signal
 from config_loader import load_keywords, load_signal_options
@@ -86,33 +86,42 @@ def chatbot_response(user_input):
 
                 if html_content:
                     data_points_dict = extract_data_points(html_content, signals)
-                    img_pil = plot_data_per_signal(data_points_dict)  # Ahora devuelve PIL.Image
+                    img_list = []  # Lista para almacenar múltiples imágenes
 
-                    if img_pil:
-                        return f"Plot generated for shot {shot}.", img_pil
+                    for img_pil in plot_data_per_signal(data_points_dict):  # Suponiendo que devuelve una lista de imágenes
+                        img_list.append(img_pil)
+
+                    if img_list:
+                        return f"Plot generated for shot {shot}.", img_list
                     else:
-                        return f"Error: No plots could be generated for {shot}.", None
+                        return f"Error: No plots could be generated for {shot}.", []
                 else:
-                    return "No data retrieved.", None
+                    return "No data retrieved.", []
             else:
-                return "No valid signals found.", None
+                return "No valid signals found.", []
         else:
-            return "Failed to interpret request.", None
-
+            return "Failed to interpret request.", []
     elif intent == "CSV":
         if isinstance(df, pd.DataFrame):
             csv_response = query_csv(user_input)
-            return csv_response if csv_response else "No relevant data found in CSV.", None
+
+            if csv_response:
+                return csv_response, []
+            else:
+                return "No relevant data found in CSV.", []
         else:
-            return "CSV data is not available.", None
+            return "CSV data is not available.", []
 
     elif intent == "PREDICT":
         shot_number = parse_user_input_for_shot_number(user_input)
         generate_if_missing = "Yes"
 
-        result_text, img1 = run_prediction(shot_number, generate_if_missing)
+        result_text, img_path = run_prediction(shot_number, generate_if_missing)
 
-        return result_text, img1
+        if img_path:
+            return result_text, [img_path]
+        else:
+            return result_text, []
 
     else:
         response = ask_general_ai(user_input)
@@ -124,10 +133,10 @@ interface = gr.Interface(
     inputs=gr.Textbox(label="Ask a question or request a plot:"),
     outputs=[
         gr.Textbox(label="Response / Prediction Result"),
-        gr.Image(label="Image"),
+        gr.Gallery(label="Generated Images"),
     ],
     title="TJ-II Chatbot",
-    description="Chatbot para responder preguntas del TJ-II."
+    description="Chatbot para análisis de espectrogramas del TJ-II."
 )
 
 # Ejecutar Gradio
