@@ -6,6 +6,7 @@ import subprocess
 import sys
 import os
 import certifi
+import io
 from ai_parser import parse_user_input_with_ai, determine_intent, ask_general_ai, clean_answer, parse_user_input_for_shot_number
 from data_fetcher import generate_url, fetch_data, extract_data_points
 from plotter import plot_data_per_signal
@@ -14,8 +15,6 @@ from config_loader import load_keywords, load_signal_options
 # ---------------------- CONFIGURACIÓN ---------------------- #
 os.environ["SSL_CERT_FILE"] = certifi.where()
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
-print(certifi.where())
 
 BASE_URL = "https://info.fusion.ciemat.es/cgi-bin/TJII_data.cgi"
 CSV_FILE = "../data/processed/cleaned_csv_data.csv"
@@ -32,10 +31,6 @@ keywords = load_keywords()
 valid_signals = load_signal_options()
 
 # ---------------------- FUNCIÓN PARA EJECUTAR `predict_spectogram.py` ---------------------- #
-import os
-import subprocess
-import sys
-
 def run_prediction(shot_number, generate_if_missing="No"):
     """Ejecuta `predict_spectogram.py`, captura su salida y devuelve mensaje e imágenes."""
     try:
@@ -49,7 +44,7 @@ def run_prediction(shot_number, generate_if_missing="No"):
         images = [None]  # Inicializar sin imágenes
 
         if "ERROR" in message or "WARNING" in message:
-            return message, *images
+            return message, None
 
         if "SUCCESS" in message:
             primary_folder = "./spectograms/spectograms_for_try"
@@ -72,7 +67,6 @@ def run_prediction(shot_number, generate_if_missing="No"):
     except Exception as e:
         return f"Error running prediction script: {e}", None
 
-
 # ---------------------- FUNCIÓN PRINCIPAL DEL CHATBOT ---------------------- #
 def chatbot_response(user_input):
     """Determina la intención del usuario y ejecuta la acción correspondiente."""
@@ -92,10 +86,10 @@ def chatbot_response(user_input):
 
                 if html_content:
                     data_points_dict = extract_data_points(html_content, signals)
-                    plot_paths = plot_data_per_signal(data_points_dict)
+                    img_pil = plot_data_per_signal(data_points_dict)  # Ahora devuelve PIL.Image
 
-                    if plot_paths:
-                        return f"Plot generated for shot {shot}.", plot_paths[0]
+                    if img_pil:
+                        return f"Plot generated for shot {shot}.", img_pil
                     else:
                         return f"Error: No plots could be generated for {shot}.", None
                 else:
@@ -108,13 +102,12 @@ def chatbot_response(user_input):
     elif intent == "CSV":
         if isinstance(df, pd.DataFrame):
             csv_response = query_csv(user_input)
-            return csv_response if csv_response else "No relevant data found in CSV.", None, None, None
+            return csv_response if csv_response else "No relevant data found in CSV.", None
         else:
-            return "CSV data is not available.", None, None, None
+            return "CSV data is not available.", None
 
     elif intent == "PREDICT":
         shot_number = parse_user_input_for_shot_number(user_input)
-        print(shot_number)
         generate_if_missing = "Yes"
 
         result_text, img1 = run_prediction(shot_number, generate_if_missing)
@@ -123,7 +116,7 @@ def chatbot_response(user_input):
 
     else:
         response = ask_general_ai(user_input)
-        return response if response else "No response.", None, None, None
+        return response if response else "No response.", None
 
 # ---------------------- INTERFAZ DE GRADIO ---------------------- #
 interface = gr.Interface(
@@ -132,11 +125,9 @@ interface = gr.Interface(
     outputs=[
         gr.Textbox(label="Response / Prediction Result"),
         gr.Image(label="Image"),
-        #gr.Image(label="N Spectrogram"),
-        #gr.Image(label="N_bw Spectrogram"),
     ],
-    title="Unified TJ-II Chatbot",
-    description="Chatbot para análisis de espectrogramas del TJ-II."
+    title="TJ-II Chatbot",
+    description="Chatbot para responder preguntas del TJ-II."
 )
 
 # Ejecutar Gradio

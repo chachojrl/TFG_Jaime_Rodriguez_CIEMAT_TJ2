@@ -103,30 +103,38 @@ def parse_user_input_with_ai(user_input):
     The user will provide a request in natural language, and you must extract the following fields:
 
     - "shot": integer (discharge number)
-    - "tstart": float (start time in seconds, if provided, otherwise 0.00)
-    - "tstop": float (stop time in seconds, if provided, otherwise 2000.00)
+    - "tstart": float (start time in seconds, default is 0.00 if not provided)
+    - "tstop": float (stop time in seconds, default is 2000.00 if not provided)
     - "signals": list of signal names (always as an array, even if only one signal is given)
+
+    **STRICT RULES:**
+    - Your response MUST BE A VALID JSON OBJECT.
+    - DO NOT include explanations, bullet points, or any text outside the JSON format.
+    - DO NOT use Markdown formatting (` ``` `) or any other text decoration.
+    - Return ONLY the JSON object.
 
     Extract structured data from the following input:
     "{user_input}"
-
-    Return ONLY the response in valid JSON format.
-    Example Output:
-    {{ "shot": 54573, "tstart": 0.0, "tstop": 2000.0, "signals": ["TFI", "ICX"] }}
     """
 
-    response = query_llm(prompt)  # Se obtiene la respuesta como string
+    response = query_llm(prompt).strip()
+    print("Raw AI Response:", response)  # Debugging output
 
-    try:
-        parsed_response = json.loads(response)  # Convertir string a JSON
-        if isinstance(parsed_response, dict):  # Asegurar que es un diccionario
-            return parsed_response
-        else:
-            print("Error: Response is not a dictionary", response)
-            return None
-    except json.JSONDecodeError:
-        print("Error parsing JSON:", response)
-        return None
+    # 🔹 Filtrar solo el JSON usando una expresión regular
+    json_match = re.search(r"\{.*\}", response, re.DOTALL)
+    
+    if json_match:
+        json_str = json_match.group()  # Capturar solo el JSON
+        try:
+            parsed_response = json.loads(json_str)  # Convertir string a JSON
+            if isinstance(parsed_response, dict):
+                print("Parsed JSON:", parsed_response)  # Debugging output
+                return parsed_response
+        except json.JSONDecodeError:
+            print("Error decoding JSON:", json_str)
+    
+    print("Error: No valid JSON found in response")
+    return None
 
 def determine_intent(user_input):
     """Usa el modelo de IA para determinar si la solicitud es sobre CSV, gráficos, predicción o una consulta general."""

@@ -1,10 +1,7 @@
 import matplotlib.pyplot as plt
 import re
-import os
-
-# Carpeta donde se guardarán las imágenes temporales
-TEMP_IMAGE_FOLDER = "./temp_plots"
-os.makedirs(TEMP_IMAGE_FOLDER, exist_ok=True)
+import io
+from PIL import Image
 
 def group_signals(signals):
     """Agrupa señales por prefijo común usando expresiones regulares."""
@@ -24,10 +21,9 @@ def group_signals(signals):
 
 def plot_data_per_signal(data_points_dict):
     """
-    Genera gráficos por grupos de señales, los guarda en archivos temporales y devuelve las rutas.
+    Genera gráficos por grupos de señales y devuelve la imagen como un objeto PIL.Image.
     """
     grouped_signals = group_signals(data_points_dict.keys())
-    image_paths = []  # Lista para almacenar rutas de imágenes generadas
 
     for group_name, signal_names in grouped_signals.items():
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -43,12 +39,10 @@ def plot_data_per_signal(data_points_dict):
         ax.legend()
         ax.grid()
 
-        # Guardar la imagen en un archivo temporal
-        image_path = os.path.join(TEMP_IMAGE_FOLDER, f"{group_name}.png")
-        plt.savefig(image_path, format="png")
+        # Guardar la imagen en un buffer de memoria en formato PNG
+        img_buf = io.BytesIO()
+        plt.savefig(img_buf, format="png")
         plt.close(fig)
+        img_buf.seek(0)  # Regresar al inicio del buffer
 
-        # Agregar la ruta a la lista
-        image_paths.append(image_path)
-
-    return image_paths  # Devuelve las rutas de las imágenes
+        return Image.open(img_buf)  
