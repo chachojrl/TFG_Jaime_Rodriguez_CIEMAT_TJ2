@@ -1,8 +1,13 @@
 __pycache__/
+
+# enviroment
 .env
 
 # venv
 venv/
+
+# utilities
+utilities/raw_data/
 
 # Data
 data/raw/preprocessed_spectograms/
