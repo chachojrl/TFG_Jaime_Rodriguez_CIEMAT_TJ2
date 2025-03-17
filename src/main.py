@@ -1,12 +1,12 @@
 import gradio as gr
 import urllib3
 import pandas as pd
-import requests
+#import requests
 import subprocess
 import sys
 import os
 import certifi
-import io
+#import io
 from ai_parser import parse_user_input_with_ai, determine_intent, ask_general_ai, clean_answer, parse_user_input_for_shot_number, query_csv
 from data_fetcher import generate_url, fetch_data, extract_data_points
 from plotter import plot_data_per_signal

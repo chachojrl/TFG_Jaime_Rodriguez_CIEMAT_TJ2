@@ -1,5 +1,5 @@
 import nest_asyncio
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from ai_parser import query_csv
 
