@@ -92,8 +92,17 @@ def clean_answer(user_input):
     
     Clean the following input:
     "{user_input}"
+    
+    Example Input 1:
+    "Success: Spectrogram 56950 MHD? Yes"
+    Example Output 1:
+    "The spectogram 56950 has MHD"
+    Example Input 2:
+    "Success: Spectrogram 56950 MHD? No"
+    Example Output 1:
+    "The spectogram 56950 does not have MHD"
 
-    Return ONLY the cleaned response as a string.
+    Return ONLY the cleaned response as a string, with no extra words, no explanations, no formatting.
     """
     return query_llm(prompt)
 
@@ -104,27 +113,38 @@ def parse_user_input_with_ai(user_input):
     The user will provide a request in natural language, and you must extract the following fields:
 
     - "shot": integer (discharge number)
-    - "tstart": float (start time in seconds, if provided, otherwise 0.00)
-    - "tstop": float (stop time in seconds, if provided, otherwise 2000.00)
+    - "tstart": float (start time in seconds, default is 0.00 if not provided)
+    - "tstop": float (stop time in seconds, default is 2000.00 if not provided)
     - "signals": list of signal names (always as an array, even if only one signal is given)
+
+    **STRICT RULES:**
+    - Your response MUST BE A VALID JSON OBJECT.
+    - DO NOT include explanations, bullet points, or any text outside the JSON format.
+    - DO NOT use Markdown formatting (` ``` `) or any other text decoration.
+    - Return ONLY the JSON object.
 
     Extract structured data from the following input:
     "{user_input}"
-
-    Return ONLY the response in valid JSON format.
-    Example Output:
-    {{ "shot": 54573, "tstart": 0.0, "tstop": 2000.0, "signals": ["TFI", "ICX"] }}
     """
 
-    response = query_llm(prompt)
+    response = query_llm(prompt).strip()
+    print("Raw AI Response:", response)  # Debugging output
 
-    return response
-
-    try:
-        return json.loads(response)
-    except json.JSONDecodeError:
-        print("Error parsing JSON:", response)
-        return None
+    # 🔹 Filtrar solo el JSON usando una expresión regular
+    json_match = re.search(r"\{.*\}", response, re.DOTALL)
+    
+    if json_match:
+        json_str = json_match.group()  # Capturar solo el JSON
+        try:
+            parsed_response = json.loads(json_str)  # Convertir string a JSON
+            if isinstance(parsed_response, dict):
+                print("Parsed JSON:", parsed_response)  # Debugging output
+                return parsed_response
+        except json.JSONDecodeError:
+            print("Error decoding JSON:", json_str)
+    
+    print("Error: No valid JSON found in response")
+    return None
 
 def determine_intent(user_input):
     """Usa el modelo de IA para determinar si la solicitud es sobre CSV, gráficos, predicción o una consulta general."""
@@ -158,6 +178,7 @@ def determine_intent(user_input):
     Examples:
     - "Cuántos shots se hicieron en 2024?" → CSV
     - "Dame la tabla con los datos de 2023" → CSV
+    - "Que fecha tiene la última descarga" → CSV
     - "¿Puedes mostrarme un gráfico de TFI?" → PLOT
     - "¿La descarga 57547 tiene mhd?" → PREDICT
     - "Explica qué significa ICX" → GENERAL
@@ -194,7 +215,18 @@ def ask_general_ai(user_input):
 
     return query_llm(prompt)
 
-def execute_sql_query(sql_query):
+def clean_csv_answers(user_input):
+    """Queries the AI model to answer general questions."""
+    prompt = f"""
+    You are an advanced AI that provides helpful, clear, and concise answers.
+    Answer the following question accurately:
+
+    "{user_input}"
+    """
+
+    return query_llm(prompt)
+
+def execute_sql_query(sql_query, question):
     """Executes an SQL query on the loaded DataFrame."""
     if data is None:
         return {"error": "CSV data not loaded."}
@@ -212,11 +244,12 @@ def execute_sql_query(sql_query):
         You are an AI that translates JSON to natural language.
         
         Convert the following JSON into a precise natural language description:
-        "{result_json}"
+        "{result_json}", and then using the folowing question: "{question}", wich is the question to that answer
+        we want, to give a better and more define answer
 
-        - If the Natural Language has a number writen, put it as a numeric number
+        - If the response contains numbers, use numerical digits instead of words
 
-        Return ONLY the natural language response.
+        Return ONLY the natural language response with no extra text, no comments, no explanations.
         """
 
         response = query_llm(prompt)
@@ -272,4 +305,4 @@ def query_csv(question: str):
     if not sql_query.lower().startswith("select"):
         return {"error": "Invalid SQL query generated."}
 
-    return execute_sql_query(sql_query)
+    return execute_sql_query(sql_query, question)

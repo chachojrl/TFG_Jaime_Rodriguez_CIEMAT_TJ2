@@ -75,7 +75,8 @@ export SSL_CERT_FILE=$(python -c "import certifi; print(certifi.where())")
 
 ### Ejecutar la Aplicación Principal
 ```bash
-python src/main.py
+cd src
+python main.py
 ```
 Esto iniciará la interfaz Gradio donde se pueden realizar consultas sobre los espectrogramas.
 

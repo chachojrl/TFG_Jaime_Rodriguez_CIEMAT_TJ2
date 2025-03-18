@@ -34,14 +34,17 @@ valid_signals = load_signal_options()
 def run_prediction(shot_number, generate_if_missing="No"):
     """Ejecuta `predict_spectogram.py`, captura su salida y devuelve mensaje e imágenes."""
     try:
+        
         result = subprocess.run(
             [sys.executable, "predict_spectogram.py", str(shot_number), generate_if_missing],
             capture_output=True, text=True
         )
 
         output_lines = result.stdout.strip().split("\n")
+        if not output_lines:
+            return "Error: No output from prediction script.", None
+        
         message = output_lines[0]  # Mensaje de predicción o error
-        images = [None]  # Inicializar sin imágenes
 
         if "ERROR" in message or "WARNING" in message:
             return message, None
