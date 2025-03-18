@@ -74,10 +74,19 @@ A través del chat en Gradio, se pueden realizar las siguientes acciones:
 - **Dibujar gráficos de señales:** Visualizar datos en forma de gráficos a partir de señales específicas.
 - **Generar respuesta general:** Respondiendo preguntas a cuestiones generales.
 
+## Datos Binarios
+Los nuevos datos binarios deben almacenarse en la carpeta `utilities/raw_data/` con el siguiente formato:
+```plaintext
+MIR5C_(numero de descarga)_(numero de descarga).txt
+```
+Ejemplo:
+```plaintext
+MIR5C_12345_12345.txt
+```
+
 ## Dependencias
 - Python 3.12
 - [requirements.txt](./requirements.txt)
 
 ## Configuración
 El archivo `src/config_loader.py` carga configuraciones desde archivos de texto y modelos dentro de `./config/`.
-
