@@ -19,3 +19,4 @@ scikit-image
 nest_asyncio
 fastapi
 pydantic
+requests
