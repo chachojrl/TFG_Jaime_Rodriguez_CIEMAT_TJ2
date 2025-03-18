@@ -18,7 +18,6 @@ Este proyecto proporciona una aplicación basada en inteligencia artificial para
 |   |-- spectograms/
 |   |   |-- spectograms_for_ai_learning/
 |   |   |-- spectograms_for_try/
-|   |-- temp_plots/
 |
 |-- utilities/
 |   |-- raw_data/
