@@ -1,7 +1,7 @@
 __pycache__/
 
 # enviroment
-.env
+*.env
 
 # venv
 venv/
