@@ -6,18 +6,15 @@ import subprocess
 import sys
 from skimage.feature import hog
 
-# ---------------------- CONFIGURATION ---------------------- #
 model_path = "config/mhd_detector_model.pkl"
 input_folders = ["./spectograms/spectograms_for_ai_learning", "./spectograms/spectograms_for_try"]
 utilities_folder = "../utilities/similPatternTool/raw_data/"
 plot_script = "plot_spectogram.py"
 
-# Check if the model exists
 if not os.path.exists(model_path):
     print(f"ERROR: Model {model_path} not found.")
     sys.exit(1)
 
-# Load the trained model
 model = joblib.load(model_path)
 
 def check_spectrogram_exists(shot_number):
@@ -91,10 +88,8 @@ def predict_mhd(shot_number, generate_if_missing):
     result_text = f"SUCCESS: Spectrogram {shot_number} MHD? {'Yes' if prediction == 1 else 'No'}"
 
     print(result_text)
-    #print(os.path.join(spectrogram_path, f"{shot_number}.png"))
     sys.exit(0)
 
-# ---------------------- MAIN EXECUTION ---------------------- #
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("ERROR: No spectrogram number or missing generation option provided.")
@@ -102,5 +97,5 @@ if __name__ == "__main__":
         
 
     shot_number = sys.argv[1]
-    generate_if_missing = sys.argv[2]  # "Yes" o "No"
+    generate_if_missing = sys.argv[2]
     predict_mhd(shot_number, generate_if_missing)

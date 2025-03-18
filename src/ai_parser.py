@@ -10,14 +10,10 @@ import pandasql as ps
 import re
 
 
-
-# Cargar variables de entorno
 load_dotenv()
 
-# Cargar señales válidas desde config_loader
 valid_signals = set(load_signal_options())
 
-# Definir el modelo global
 LLM_MODEL = "llama3"
 
 CSV_FILE = "../data/processed/cleaned_csv_data.csv"
@@ -64,11 +60,10 @@ def parse_user_input_for_shot_number(user_input):
     """
     response = query_llm(prompt).strip()
 
-    # 🔹 Extraer solo el primer número válido de la respuesta
     match = re.search(r"\d+", response)
     
     if match:
-        shot_number = int(match.group())  # Convertir a entero
+        shot_number = int(match.group())
         return shot_number
     else:
         print("Error: No valid shot number found in response:", response)
@@ -92,7 +87,7 @@ def clean_answer(user_input):
     Example Output 1:
     "The spectogram 56950 does not have MHD"
 
-    Return ONLY the cleaned response as a string.
+    Return ONLY the cleaned response as a string, with no extra words, no explanations, no formatting.
     """
     return query_llm(prompt)
 
@@ -118,17 +113,16 @@ def parse_user_input_with_ai(user_input):
     """
 
     response = query_llm(prompt).strip()
-    print("Raw AI Response:", response)  # Debugging output
+    print("Raw AI Response:", response)
 
-    # 🔹 Filtrar solo el JSON usando una expresión regular
     json_match = re.search(r"\{.*\}", response, re.DOTALL)
     
     if json_match:
-        json_str = json_match.group()  # Capturar solo el JSON
+        json_str = json_match.group() 
         try:
-            parsed_response = json.loads(json_str)  # Convertir string a JSON
+            parsed_response = json.loads(json_str)
             if isinstance(parsed_response, dict):
-                print("Parsed JSON:", parsed_response)  # Debugging output
+                print("Parsed JSON:", parsed_response)
                 return parsed_response
         except json.JSONDecodeError:
             print("Error decoding JSON:", json_str)
@@ -174,22 +168,19 @@ def determine_intent(user_input):
     - "Explica qué significa ICX" → GENERAL
     """
 
-    response = query_llm(prompt).strip()  # 🔹 Limpiar espacios en blanco
+    response = query_llm(prompt).strip()
     print(response)
 
-    # 🔹 Extraer solo la última línea de la respuesta, que debería ser la clasificación
     last_line = response.split("\n")[-1].strip().upper()
 
-    # 🔹 Eliminar caracteres extra o comentarios que puedan estar al final
     last_line = last_line.split("#")[0].strip()
     print(last_line)
 
-    # 🔹 Asegurar que la respuesta sea válida
     valid_intents = {"PLOT", "CSV", "PREDICT", "GENERAL"}
     if last_line not in valid_intents:
         last_line = "PREDICT"
 
-    print(f"INTENT: {last_line}")  # 🔹 Debugging: Verifica la respuesta limpia
+    print(f"INTENT: {last_line}")
     return last_line
 
 
@@ -224,12 +215,10 @@ def execute_sql_query(sql_query, question):
     try:
         result = ps.sqldf(sql_query, {"data": data})
 
-        # Convert result to JSON
         result_json = result.to_dict(orient="records")
         
         print(result_json)
 
-        # Generate a natural language response
         prompt = f"""
         You are an AI that translates JSON to natural language.
         
@@ -287,10 +276,9 @@ def query_csv(question: str):
     """
 
     sql_query = query_llm(prompt).strip()
-    print("Generated SQL Query:", sql_query)  # Debugging output
+    print("Generated SQL Query:", sql_query) 
 
-    # Ensure only a single valid SQL statement is returned
-    sql_query = sql_query.split(";")[0].strip()  # Keep only the first SQL statement before any semicolon
+    sql_query = sql_query.split(";")[0].strip()
 
     if not sql_query.lower().startswith("select"):
         return {"error": "Invalid SQL query generated."}

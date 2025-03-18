@@ -12,14 +12,13 @@ from data_fetcher import generate_url, fetch_data, extract_data_points
 from plotter import plot_data_per_signal
 from config_loader import load_keywords, load_signal_options
 
-# ---------------------- CONFIGURACIÓN ---------------------- #
+# ---------------------- CONFIGURATION ---------------------- #
 os.environ["SSL_CERT_FILE"] = certifi.where()
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://info.fusion.ciemat.es/cgi-bin/TJII_data.cgi"
 CSV_FILE = "../data/processed/cleaned_csv_data.csv"
 
-# Cargar CSV
 def load_csv():
     try:
         return pd.read_csv(CSV_FILE)
@@ -30,7 +29,9 @@ df = load_csv()
 keywords = load_keywords()
 valid_signals = load_signal_options()
 
-# ---------------------- FUNCIÓN PARA EJECUTAR `predict_spectogram.py` ---------------------- #
+# ------------------ END CONFIGURATION ---------------------- #
+
+
 def run_prediction(shot_number, generate_if_missing="No"):
     """Ejecuta `predict_spectogram.py`, captura su salida y devuelve mensaje e imágenes."""
     try:
@@ -44,7 +45,7 @@ def run_prediction(shot_number, generate_if_missing="No"):
         if not output_lines:
             return "Error: No output from prediction script.", None
         
-        message = output_lines[0]  # Mensaje de predicción o error
+        message = output_lines[0] 
 
         if "ERROR" in message or "WARNING" in message:
             return message, None
@@ -53,14 +54,11 @@ def run_prediction(shot_number, generate_if_missing="No"):
             primary_folder = "./spectograms/spectograms_for_try"
             secondary_folder = "./spectograms/spectograms_for_ai_learning"
 
-            # Ruta de la imagen en el primer intento
             image_path = f"{primary_folder}/{shot_number}.png"
 
-            # Si no existe, probar con la carpeta secundaria
             if not os.path.exists(image_path):
                 image_path = f"{secondary_folder}/{shot_number}.png"
 
-                # Si tampoco existe en la carpeta secundaria, dar error
                 if not os.path.exists(image_path):
                     return f"Error: Image for shot {shot_number} not found in both directories.", None
 
@@ -70,7 +68,7 @@ def run_prediction(shot_number, generate_if_missing="No"):
     except Exception as e:
         return f"Error running prediction script: {e}", None
 
-# ---------------------- FUNCIÓN PRINCIPAL DEL CHATBOT ---------------------- #
+# ---------------------- MAIN RESPONSE ---------------------- #
 def chatbot_response(user_input):
     """Determina la intención del usuario y ejecuta la acción correspondiente."""
     intent = determine_intent(user_input)
@@ -89,9 +87,9 @@ def chatbot_response(user_input):
 
                 if html_content:
                     data_points_dict = extract_data_points(html_content, signals)
-                    img_list = []  # Lista para almacenar múltiples imágenes
+                    img_list = []
 
-                    for img_pil in plot_data_per_signal(data_points_dict):  # Suponiendo que devuelve una lista de imágenes
+                    for img_pil in plot_data_per_signal(data_points_dict): 
                         img_list.append(img_pil)
 
                     if img_list:
@@ -129,8 +127,10 @@ def chatbot_response(user_input):
     else:
         response = ask_general_ai(user_input)
         return response if response else "No response.", None
+    
+# ------------------ END MAIN RESPONSE ---------------------- #
 
-# ---------------------- INTERFAZ DE GRADIO ---------------------- #
+# ---------------------- GRADIO INTERFACE ---------------------- #
 interface = gr.Interface(
     fn=chatbot_response,
     inputs=gr.Textbox(label="Ask a question or request a plot:"),
@@ -142,6 +142,5 @@ interface = gr.Interface(
     description="Chatbot para análisis de espectrogramas del TJ-II."
 )
 
-# Ejecutar Gradio
 if __name__ == "__main__":
     interface.launch()

@@ -24,7 +24,7 @@ def plot_data_per_signal(data_points_dict):
     Genera gráficos por grupos de señales y devuelve una lista de imágenes PIL.
     """
     grouped_signals = group_signals(data_points_dict.keys())
-    images = []  # Lista para almacenar imágenes generadas
+    images = []
 
     for group_name, signal_names in grouped_signals.items():
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -40,13 +40,11 @@ def plot_data_per_signal(data_points_dict):
         ax.legend()
         ax.grid()
 
-        # Guardar la imagen en un buffer de memoria
         img_buf = io.BytesIO()
         plt.savefig(img_buf, format="png")
         plt.close(fig)
         img_buf.seek(0)  
 
-        # Convertir a PIL.Image y agregar a la lista
         images.append(Image.open(img_buf))
 
-    return images  # Retornar lista de imágenes
+    return images

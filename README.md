@@ -102,31 +102,6 @@ from ai_parser_2 import ...
 ```
 Esto permitirá utilizar el modelo alternativo según la necesidad del usuario.
 
-### Instalación de Ollama y Llama 3
-Si se desea utilizar **Ollama con Llama 3**, es necesario instalar Ollama y descargar el modelo correspondiente:
-```bash
-curl -fsSL https://ollama.com/install.sh | sh  # Para macOS y Linux
-```
-En **Windows**, descargar y ejecutar el instalador desde: [https://ollama.com/download](https://ollama.com/download)
-
-Una vez instalado, descargar el modelo **Llama 3** ejecutando:
-```bash
-ollama pull llama3
-```
-Sistema permite utilizar dos modelos de lenguaje diferentes:
-- **Ollama (Llama 3)**: Implementado en `ai_parser.py`.
-- **IBM Watson (meta-llama/llama-3-3-70b-instruct)**: Implementado en `ai_parser_2.py`.
-
-Para cambiar el modelo utilizado, se debe modificar la importación en `src/main.py`, cambiando:
-```python
-from ai_parser import ...
-```
-a:
-```python
-from ai_parser_2 import ...
-```
-Esto permitirá utilizar el modelo alternativo según la necesidad del usuario.
-
 ## Datos Binarios
 Los nuevos datos binarios deben almacenarse en la carpeta `utilities/raw_data/` con el siguiente formato:
 ```plaintext
